@@ -1,27 +1,28 @@
 use crate::petri::*;
 
-use pnets::standard;
-use pnets_pnml::pnml::Pnml;
-use serde_xml_rs::from_str;
-use quick_xml::Reader;
-use quick_xml::events::Event;
-use quick_xml::name::QName;
+// use pnets::standard;
+// use pnets_pnml::pnml::Pnml;
+// use serde_xml_rs::from_str;
+// use quick_xml::Reader;
+// use quick_xml::events::Event;
+// use quick_xml::name::QName;
 use roxmltree::Document;
 use std::convert::TryInto;
 use std::error::Error;
 use std::fs;
+use std::path::Path;
 
-pub fn pnets_read_ptnets_from(path: &str) -> Result<Vec<standard::Net>, Box<dyn Error>> {
-    let raw_string = fs::read_to_string(path)?;
-    let pnml: Pnml = quick_xml::de::from_str(raw_string.as_str())?;
-    let nets: Vec<standard::Net> = (&pnml).try_into()?;
-    // let pnml: Pnml = (&nets).into();
-    for net in nets.iter() {
-        println!("net: {:?}", net);
-    }
-    // println!("{:?}", quick_xml::se::to_string(&pnml));
-    Ok(nets)
-}
+// pub fn pnets_read_ptnets_from(path: &str) -> Result<Vec<standard::Net>, Box<dyn Error>> {
+//     let raw_string = fs::read_to_string(path)?;
+//     let pnml: Pnml = quick_xml::de::from_str(raw_string.as_str())?;
+//     let nets: Vec<standard::Net> = (&pnml).try_into()?;
+//     // let pnml: Pnml = (&nets).into();
+//     for net in nets.iter() {
+//         println!("net: {:?}", net);
+//     }
+//     // println!("{:?}", quick_xml::se::to_string(&pnml));
+//     Ok(nets)
+// }
 
 pub fn is_type_element(node: &roxmltree::Node, ty: &str) -> bool {
     node.is_element() && node.tag_name().name() == ty
@@ -172,4 +173,32 @@ fn parse_arc(net: &mut PTNet, node: &roxmltree::Node) {
         ty: arc_ty,
     };
     net.insert_arc(arc, arc_src, arc_dst);
+}
+
+pub fn validate_path(input: &str) -> bool {
+    let path = Path::new(input);
+    if !path.exists() {
+        return false;
+    }
+    let model_path = path.join("model.pnml");
+    if !model_path.exists() {
+        return false;
+    }
+    let ltl_fire_path = path.join("LTLFireability.xml");
+    if !ltl_fire_path.exists() {
+        return false;
+    }
+    let ltl_card_path = path.join("LTLCardinality.xml");
+    if !ltl_card_path.exists() {
+        return false;
+    }
+    let ctl_fire_path = path.join("CTLFireability.xml");
+    if !ctl_fire_path.exists() {
+        return false;
+    }
+    let ctl_card_path = path.join("CTLCardinality.xml");
+    if !ctl_card_path.exists() {
+        return false;
+    }
+    return true;
 }

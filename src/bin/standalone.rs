@@ -1,8 +1,31 @@
 
 use ptchecker::utils::*;
 
-fn main() {
+use std::env;
+use std::path::Path;
+use std::process::exit;
+
+fn old_main() {
     // let nets = pnets_read_ptnets_from("data/SatelliteMemory-PT-X00100Y0003.pnml");
-    let nets = parse_pnml("data/SatelliteMemory-PT-X00100Y0003.pnml");
-    println!("read nets: {:#?}", nets);
+    // let nets = parse_pnml("data/SatelliteMemory-PT-X00100Y0003.pnml");
+    // println!("read nets: {:#?}", nets);
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("Usage: ptchecker <path>\n");
+        exit(0);
+    }
+    if !validate_path(args[1].as_str()) {
+        println!("Invalid input path\n");
+        exit(1);
+    }
+    let model_path = Path::new(args[1].as_str()).join("model.pnml");
+    let nets = parse_pnml(model_path.to_str().unwrap()).unwrap_or(Vec::new());
+    if nets.len() == 0 {
+        println!("No model found, exiting\n");
+        exit(0);
+    }
+    // println!("read nets: {:#?}", nets[0]);
 }
