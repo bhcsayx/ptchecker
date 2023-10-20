@@ -1,4 +1,7 @@
-
+use ptchecker::logics::*;
+use ptchecker::logics::parser::*;
+use ptchecker::petri::*;
+use ptchecker::petri::parser::*;
 use ptchecker::utils::*;
 
 use std::env;
@@ -28,4 +31,8 @@ fn main() {
         exit(0);
     }
     // println!("read nets: {:#?}", nets[0]);
+    let input_path = Path::new(args[1].as_str()).join("LTLFireability.xml");
+    if let Ok(formulas) = parse_formulas(input_path.to_str().unwrap()) {
+        println!("formula: {:?}", formulas[15]);
+    }
 }

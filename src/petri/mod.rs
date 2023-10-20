@@ -1,6 +1,8 @@
 use bimap::BiMap;
 use std::collections::HashMap;
 
+pub mod parser;
+
 #[derive(Debug)]
 pub struct Arc {
     pub id: String,
