@@ -52,7 +52,6 @@ fn parse_formula(node: &roxmltree::Node) -> FormulaTy {
                 println!("Malformed cardinality atoms");
                 exit(1);
             }
-            println!("card atom: {:?}", elements);
             let lhs = match elements[0].tag_name().name() {
                 "integer-constant" => format!("n_{}", elements[0].text().unwrap()),
                 "tokens-count" => format!("p_{}", elements[0].text().unwrap()),
