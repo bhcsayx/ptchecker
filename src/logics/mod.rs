@@ -25,6 +25,7 @@ pub enum FormulaTy {
     Global(Box<Self>),
     Finally(Box<Self>),
     Until(Box<Self>, Box<Self>),
+    Release(Box<Self>, Box<Self>),
     Forall(Box<Self>),
     Exists(Box<Self>),
 }
