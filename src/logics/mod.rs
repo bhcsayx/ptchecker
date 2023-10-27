@@ -1,6 +1,9 @@
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 pub mod parser;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PTAtom {
     Cardinality(String, String),
     Fireability(String),
@@ -12,7 +15,7 @@ pub struct Formula {
     pub ty: FormulaTy,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FormulaTy {
     True,
     False,
@@ -29,3 +32,5 @@ pub enum FormulaTy {
     Forall(Box<Self>),
     Exists(Box<Self>),
 }
+
+pub type FormulaSet = HashSet<FormulaTy>;

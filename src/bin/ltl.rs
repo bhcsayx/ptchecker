@@ -14,7 +14,15 @@ fn ltl_check(input: &Formula) {
     // Test formula negation
     println!("negated: {:?}", ltl_negate(input.ty.clone()));
     // Test formula simplification
-    println!("simplified: {:?}", ltl_simplify(ltl_negate(input.ty.clone())));
+    let simplified = ltl_simplify(ltl_negate(input.ty.clone()));
+    println!("simplified: {:?}", simplified);
+    let sub = ltl_subformulas(simplified.clone());
+    for f in sub.iter() {
+        println!("subf: {:?}", f);
+    }
+    // if let FormulaTy::Forall(inner) = simplified {
+    //     build_epsilon_graph(*inner.clone());
+    // }
 }
 
 fn old_main() {
