@@ -20,9 +20,10 @@ fn ltl_check(input: &Formula) {
     for f in sub.iter() {
         println!("subf: {:?}", f);
     }
-    // if let FormulaTy::Forall(inner) = simplified {
-    //     build_epsilon_graph(*inner.clone());
-    // }
+    if let FormulaTy::Forall(inner) = simplified {
+        let graph = build_graph(*inner.clone());
+        print_automaton(graph, sub.clone());
+    }
 }
 
 fn old_main() {

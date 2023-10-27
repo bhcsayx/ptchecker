@@ -14,6 +14,7 @@ use crate::ltl::automaton::*;
 
 pub fn ltl_subf_recur(set: &mut FormulaSet, input: FormulaTy) {
     if let FormulaTy::Forall(inner) = input.clone() {}
+    else if let FormulaTy::False = input.clone() {}
     else {
         set.insert(input.clone());
     }
@@ -65,8 +66,9 @@ pub fn ltl_subformulas(input: FormulaTy) -> FormulaSet {
 }
 
 pub fn ltl_maximal_csubsets(closure: FormulaSet) -> HashSet<FormulaSet> {
-    let mut res = Vec::new();
+    let mut res = HashSet::new();
 
+    return res;
 }
 
 pub fn ltl_negate(input: FormulaTy) -> FormulaTy {
@@ -134,100 +136,180 @@ pub fn ltl_simplify(input: FormulaTy) -> FormulaTy {
     }
 }
 
-pub fn build_local_automaton(input: FormulaTy) -> Automaton::<FormulaSet, FormulaSet> {
+pub fn build_automaton(input: FormulaTy) -> Automaton::<FormulaSet, FormulaSet> {
     let mut res = Automaton::<FormulaSet, FormulaSet>::new();
     res
 }
 
-pub fn build_epsilon_graph(input: FormulaTy) -> Graph::<FormulaSet, FormulaSet> {
-    let mut res = Graph::<FormulaSet, FormulaSet>::new();
-    let mut node_map = HashMap::<NodeIndex, FormulaSet>::new();
-    // Initial node with {input}
-    let mut init = HashSet::new();
-    init.insert(input.clone());
-    let init_idx = res.add_node(init.clone());
-    node_map.insert(init_idx.clone(), init);
+fn expand(nodes: &mut HashSet<usize>, index: &mut usize, now_table: &mut HashMap<usize, FormulaSet>, next_table: &mut HashMap<usize, FormulaSet>, incoming_table: &mut 
+    HashMap<usize, HashSet<usize>>, curr: FormulaSet, old: FormulaSet, next: FormulaSet, incoming: HashSet<usize>) {
 
-    let mut new_nodes = vec![init_idx];
-    while new_nodes.len() != 0 {
-        let mut tmp_nodes = Vec::new();
-        for idx in new_nodes.iter() {
-            let subformulas = node_map.get(idx).unwrap().clone();
-            let mut reduced_formulas = subformulas.clone();
-            for f in subformulas.iter() {
-                match f {
-                    FormulaTy::And(lhs, rhs) => {
-                        reduced_formulas.remove(f);
-                        reduced_formulas.insert(*lhs.clone());
-                        reduced_formulas.insert(*rhs.clone());
-                        let and_idx = res.add_node(reduced_formulas.clone());
-                        res.add_edge(idx.clone(), and_idx.clone(), HashSet::new());
-                        tmp_nodes.push(and_idx.clone());
-                        node_map.insert(and_idx, reduced_formulas);
-                        break;
-                    },
-                    FormulaTy::Or(lhs, rhs) => {
-                        reduced_formulas.remove(f);
-                        reduced_formulas.insert(*lhs.clone());
-                        let or_idx1 = res.add_node(reduced_formulas.clone());
-                        res.add_edge(idx.clone(), or_idx1.clone(), HashSet::new());
-                        tmp_nodes.push(or_idx1.clone());
-                        node_map.insert(or_idx1, reduced_formulas.clone());
+    if curr.len() == 0 {
+        let mut found = false;
+        for q in nodes.iter() {
+            // println!("getting q: {:?}", q);
+            if now_table.get(q).unwrap().clone() == old && next_table.get(q).unwrap().clone() == next {
+                found = true;
+                for i in incoming.iter() {
+                    let incomings = incoming_table.get_mut(q).unwrap();
+                    incomings.insert(i.clone());
+                }
+                break;
+            }
+        }
+        if !found {
+            nodes.insert(index.clone());
+            incoming_table.insert(index.clone(), incoming.clone());
+            now_table.insert(index.clone(), old.clone());
+            next_table.insert(index.clone(), next.clone());
+            let mut new_incoming = HashSet::new();
+            new_incoming.insert(index.clone());
+            *index += 1;
 
-                        reduced_formulas.remove(&(*lhs.clone()));
-                        reduced_formulas.insert(*rhs.clone());
-                        let or_idx2 = res.add_node(reduced_formulas.clone());
-                        res.add_edge(idx.clone(), or_idx2.clone(), HashSet::new());
-                        tmp_nodes.push(or_idx2.clone());
-                        node_map.insert(or_idx2, reduced_formulas);
-                        break;
-                    },
-                    FormulaTy::Until(lhs, rhs) => {
-                        reduced_formulas.remove(f);
-                        reduced_formulas.insert(*rhs.clone());
-                        let until_idx1 = res.add_node(reduced_formulas.clone());
-                        res.add_edge(idx.clone(), until_idx1.clone(), HashSet::new());
-                        tmp_nodes.push(until_idx1.clone());
-                        node_map.insert(until_idx1, reduced_formulas.clone());
+            expand(nodes, index, now_table, next_table, incoming_table, next.clone(), HashSet::new(), HashSet::new(), new_incoming);
+        }
+    }
+    else {
+        for f in curr.iter() {
+            let mut new_curr = curr.clone();
+            new_curr.remove(f);
+            let mut new_old = old.clone();
+            new_old.insert(f.clone());
+            match f {
+                FormulaTy::True => {
+                    expand(nodes, index, now_table, next_table, incoming_table, new_curr.clone(), new_old.clone(), next.clone(), incoming.clone());
+                },
+                FormulaTy::False => {},
+                FormulaTy::Neg(atom) => {
+                    if !new_old.contains(&FormulaTy::Prop(atom.clone())) {
+                        expand(nodes, index, now_table, next_table, incoming_table, new_curr.clone(), new_old.clone(), next.clone(), incoming.clone());
+                    }
+                },
+                FormulaTy::Prop(atom) => {
+                    if !new_old.contains(&FormulaTy::Neg(atom.clone())) {
+                        expand(nodes, index, now_table, next_table, incoming_table, new_curr.clone(), new_old.clone(), next.clone(), incoming.clone());
+                    }
+                },
+                FormulaTy::And(lhs, rhs) => {
+                    // println!("Entering and");
+                    let mut and_curr = new_curr.clone();
+                    let mut and_curr_right = HashSet::new();
+                    and_curr_right.insert(*lhs.clone());
+                    and_curr_right.insert(*rhs.clone());
+                    and_curr_right = and_curr_right.difference(&new_old).map(|item| item.clone()).collect();
+                    and_curr = and_curr.union(&and_curr_right).map(|item| item.clone()).collect();
+                    expand(nodes, index, now_table, next_table, incoming_table, and_curr.clone(), new_old.clone(), next.clone(), incoming.clone());
+                },
+                FormulaTy::Next(inner) => {
+                    let mut new_next = next.clone();
+                    let mut next_rhs = HashSet::new();
+                    next_rhs.insert(*inner.clone());
+                    new_next = new_next.union(&next_rhs).map(|item| item.clone()).collect();
+                    expand(nodes, index, now_table, next_table, incoming_table, new_curr.clone(), new_old.clone(), new_next.clone(), incoming.clone());
+                },
+                FormulaTy::Or(lhs, rhs) => {
+                    let mut or_curr1 = new_curr.clone();
+                    let mut or_curr_right1 = HashSet::new();
+                    or_curr_right1.insert(*rhs.clone());
+                    or_curr_right1 = or_curr_right1.difference(&new_old).map(|item| item.clone()).collect();
+                    or_curr1 = or_curr1.union(&or_curr_right1).map(|item| item.clone()).collect();
+                    let mut or_curr2 = new_curr.clone();
+                    let mut or_curr_right2 = HashSet::new();
+                    or_curr_right2.insert(*lhs.clone());
+                    or_curr_right2 = or_curr_right2.difference(&new_old).map(|item| item.clone()).collect();
+                    or_curr2 = or_curr2.union(&or_curr_right2).map(|item| item.clone()).collect();
+                    expand(nodes, index, now_table, next_table, incoming_table, or_curr1.clone(), new_old.clone(), next.clone(), incoming.clone());
+                    expand(nodes, index, now_table, next_table, incoming_table, or_curr2.clone(), new_old.clone(), next.clone(), incoming.clone());
+                },
+                FormulaTy::Until(lhs, rhs) => {
+                    let mut or_curr1 = new_curr.clone();
+                    let mut or_curr_right1 = HashSet::new();
+                    or_curr_right1.insert(*lhs.clone());
+                    or_curr_right1 = or_curr_right1.difference(&new_old).map(|item| item.clone()).collect();
+                    or_curr1 = or_curr1.union(&or_curr_right1).map(|item| item.clone()).collect();
+                    let mut next_right = HashSet::new();
+                    next_right.insert(f.clone());
+                    let mut new_next = next.clone();
+                    new_next = new_next.union(&next_right).map(|item| item.clone()).collect();
+                    let mut or_curr2 = new_curr.clone();
+                    let mut or_curr_right2 = HashSet::new();
+                    or_curr_right2.insert(*rhs.clone());
+                    or_curr_right2 = or_curr_right2.difference(&new_old).map(|item| item.clone()).collect();
+                    or_curr2 = or_curr2.union(&or_curr_right2).map(|item| item.clone()).collect();
+                    expand(nodes, index, now_table, next_table, incoming_table, or_curr1.clone(), new_old.clone(), new_next.clone(), incoming.clone());
+                    expand(nodes, index, now_table, next_table, incoming_table, or_curr2.clone(), new_old.clone(), next.clone(), incoming.clone());
+                },
+                FormulaTy::Release(lhs, rhs) => {
+                    let mut or_curr1 = new_curr.clone();
+                    let mut or_curr_right1 = HashSet::new();
+                    or_curr_right1.insert(*rhs.clone());
+                    or_curr_right1 = or_curr_right1.difference(&new_old).map(|item| item.clone()).collect();
+                    or_curr1 = or_curr1.union(&or_curr_right1).map(|item| item.clone()).collect();
+                    let mut next_right = HashSet::new();
+                    next_right.insert(f.clone());
+                    let mut new_next = next.clone();
+                    new_next = new_next.union(&next_right).map(|item| item.clone()).collect();
+                    let mut or_curr2 = new_curr.clone();
+                    let mut or_curr_right2 = HashSet::new();
+                    or_curr_right2.insert(*rhs.clone());
+                    or_curr_right2.insert(*lhs.clone());
+                    or_curr_right2 = or_curr_right2.difference(&new_old).map(|item| item.clone()).collect();
+                    or_curr2 = or_curr2.union(&or_curr_right2).map(|item| item.clone()).collect();
+                    expand(nodes, index, now_table, next_table, incoming_table, or_curr1.clone(), new_old.clone(), new_next.clone(), incoming.clone());
+                    expand(nodes, index, now_table, next_table, incoming_table, or_curr2.clone(), new_old.clone(), next.clone(), incoming.clone());
+                },
+                _ => {},
+            }
+            break;
+        }
+    }
+}
 
-                        reduced_formulas.remove(&(*rhs.clone()));
-                        reduced_formulas.insert(*lhs.clone());
-                        reduced_formulas.insert(FormulaTy::Next(Box::new(f.clone())));
-                        let until_idx2 = res.add_node(reduced_formulas.clone());
-                        let mut weight = HashSet::new();
-                        weight.insert(FormulaTy::Not(Box::new(f.clone())));
-                        res.add_edge(idx.clone(), until_idx2.clone(), weight);
-                        tmp_nodes.push(until_idx2.clone());
-                        node_map.insert(until_idx2, reduced_formulas.clone());
-                        break;
-                    },
-                    FormulaTy::Release(lhs, rhs) => {
-                        reduced_formulas.remove(f);
-                        reduced_formulas.insert(*lhs.clone());
-                        reduced_formulas.insert(*rhs.clone());
-                        let release_idx1 = res.add_node(reduced_formulas.clone());
-                        res.add_edge(idx.clone(), release_idx1.clone(), HashSet::new());
-                        tmp_nodes.push(release_idx1.clone());
-                        node_map.insert(release_idx1, reduced_formulas.clone());
+pub fn build_graph(input: FormulaTy) -> (HashSet<usize>, HashMap<usize, FormulaSet>, HashMap<usize, HashSet<usize>>) {
+    let mut nodes = HashSet::new(); // 0 is for init node
+    let mut now_table: HashMap<usize, FormulaSet> = HashMap::new();
+    let mut next_table: HashMap<usize, FormulaSet> = HashMap::new();
+    let mut incoming_table: HashMap<usize, HashSet<usize>> = HashMap::new();
+    let mut index = 1;
 
-                        reduced_formulas.remove(&(*lhs.clone()));
-                        reduced_formulas.insert(FormulaTy::Next(Box::new(f.clone())));
-                        let release_idx2 = res.add_node(reduced_formulas.clone());
-                        let mut weight = HashSet::new();
-                        weight.insert(FormulaTy::Not(Box::new(f.clone())));
-                        res.add_edge(idx.clone(), release_idx2.clone(), weight);
-                        tmp_nodes.push(release_idx2.clone());
-                        node_map.insert(release_idx2, reduced_formulas.clone());
-                        break;
-                    },
-                    _ => {},
+    nodes.insert(0); // Insert init as 0;
+    now_table.insert(0, HashSet::new());
+    next_table.insert(0, HashSet::new());
+
+    let mut curr = HashSet::new();
+    curr.insert(input.clone());
+
+    let mut old = HashSet::new();
+    let mut next = HashSet::new();
+    let mut incoming = HashSet::new();
+    incoming.insert(0);
+    
+    expand(&mut nodes, &mut index, &mut now_table, &mut next_table, &mut incoming_table, curr, old, next, incoming);
+    // println!("{:?} {:?} {:?}", nodes, now_table, incoming_table);
+    return (nodes, now_table, incoming_table);
+}
+
+pub fn print_automaton(graph: (HashSet<usize>, HashMap<usize, FormulaSet>, HashMap<usize, HashSet<usize>>), subs: FormulaSet) {
+    let (nodes, now_table, incoming_table) = graph;
+    for (k, n) in now_table.iter() {
+        println!("node {:?}: {:?}", k, n);
+    }
+    for (k, i)  in incoming_table.iter() {
+        if i.contains(&0) {
+            println!("{:?} is an initial state", k);
+        }
+    }
+    let mut fi = HashSet::new();
+    for sub in subs.iter() {
+        if let FormulaTy::Until(lhs, rhs) = sub {
+            for (k, n) in now_table.iter() {
+                if (n.contains(&(*rhs.clone())) || !n.contains(sub)) && k.clone() != 0 {
+                    fi.insert(k.clone());
                 }
             }
         }
-        new_nodes = tmp_nodes;
     }
-    // println!("epsilon graph: {:?}", res);
-    // let dot = format!("{:?}", Dot::with_config(&res, &[Config::GraphContentOnly]));
-    // std::fs::write("./epsilon.dot", dot.as_str());
-    return res;
+    for f in fi.iter() {
+        println!("{:?} is an final state", f);
+    }
 }
