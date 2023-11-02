@@ -9,7 +9,7 @@ use std::env;
 use std::path::Path;
 use std::process::exit;
 
-fn ltl_check(input: &Formula) {
+fn ltl_check(model: &PTNet, input: &Formula) {
     println!("formula: {:?}", input.ty);
     // Test formula negation
     println!("negated: {:?}", ltl_negate(input.ty.clone()));
@@ -23,6 +23,7 @@ fn ltl_check(input: &Formula) {
     if let FormulaTy::Forall(inner) = simplified {
         let graph = build_graph(*inner.clone());
         print_automaton(graph, sub.clone());
+        // model.reachability_graph();
     }
 }
 
@@ -54,6 +55,6 @@ fn main() {
         for f in formulas.iter() {
             // ltl_check(f);
         }
-        ltl_check(&formulas[15]);
+        ltl_check(&nets[0], &formulas[0]);
     }
 }

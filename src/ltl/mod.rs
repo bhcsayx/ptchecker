@@ -136,11 +136,6 @@ pub fn ltl_simplify(input: FormulaTy) -> FormulaTy {
     }
 }
 
-pub fn build_automaton(input: FormulaTy) -> Automaton::<FormulaSet, FormulaSet> {
-    let mut res = Automaton::<FormulaSet, FormulaSet>::new();
-    res
-}
-
 fn expand(nodes: &mut HashSet<usize>, index: &mut usize, now_table: &mut HashMap<usize, FormulaSet>, next_table: &mut HashMap<usize, FormulaSet>, incoming_table: &mut 
     HashMap<usize, HashSet<usize>>, curr: FormulaSet, old: FormulaSet, next: FormulaSet, incoming: HashSet<usize>) {
 
@@ -275,6 +270,7 @@ pub fn build_graph(input: FormulaTy) -> (HashSet<usize>, HashMap<usize, FormulaS
     nodes.insert(0); // Insert init as 0;
     now_table.insert(0, HashSet::new());
     next_table.insert(0, HashSet::new());
+    incoming_table.insert(0, HashSet::new());
 
     let mut curr = HashSet::new();
     curr.insert(input.clone());
@@ -310,6 +306,30 @@ pub fn print_automaton(graph: (HashSet<usize>, HashMap<usize, FormulaSet>, HashM
         }
     }
     for f in fi.iter() {
-        println!("{:?} is an final state", f);
+        println!("{:?} is a final state", f);
     }
+    let mut automaton_graph = Graph::<FormulaSet, FormulaSet>::new();
+    let mut idx_map: HashMap<usize, NodeIndex> = HashMap::new();
+
+    for (k, n) in now_table.iter() {
+        let g_idx = automaton_graph.add_node(n.clone());
+        idx_map.insert(k.clone(), g_idx.clone());
+    }
+    for (k, s) in incoming_table.iter() {
+        let dst_idx = idx_map.get(k).unwrap().clone();
+        for i in s.iter() {
+            let src_idx = idx_map.get(i).unwrap().clone();
+            let mut weight = HashSet::new();
+            for f in now_table.get(k).unwrap().clone() {
+                if let FormulaTy::Prop(_) = f {
+                    weight.insert(f.clone());
+                }
+            }
+            automaton_graph.add_edge(src_idx, dst_idx, weight);
+        }
+    }
+    let output = format!("{:?}", Dot::with_config(&automaton_graph, &[Config::GraphContentOnly]));
+    std::fs::write("automaton.dot", output.as_str());
+    // let mut res = Automaton::<FormulaSet, PTAtom>::new();
+    // res
 }

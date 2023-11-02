@@ -15,7 +15,7 @@ pub struct Formula {
     pub ty: FormulaTy,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub enum FormulaTy {
     True,
     False,
@@ -31,6 +31,77 @@ pub enum FormulaTy {
     Release(Box<Self>, Box<Self>),
     Forall(Box<Self>),
     Exists(Box<Self>),
+}
+
+impl std::fmt::Debug for FormulaTy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FormulaTy::True => {
+                write!(f, "True");
+            },
+            FormulaTy::False => {
+                write!(f, "False");
+            },
+            FormulaTy::Prop(atom) => {
+                match atom {
+                    PTAtom::Cardinality(lhs, rhs) => {
+                        write!(f, "C({} <= {})", lhs, rhs);
+                    },
+                    PTAtom::Fireability(inner) => {
+                        write!(f, "F({})", inner);
+                    },
+                }
+            },
+            FormulaTy::Neg(atom) => {
+                match atom {
+                    PTAtom::Cardinality(lhs, rhs) => {
+                        write!(f, "C({} <= {})", lhs, rhs);
+                    },
+                    PTAtom::Fireability(inner) => {
+                        write!(f, "F({})", inner);
+                    },
+                }
+            },
+            FormulaTy::Not(inner) => {
+                write!(f, "!");
+                (*inner.clone()).fmt(f);
+            },
+            FormulaTy::Or(lhs, rhs) => {
+                (*lhs.clone()).fmt(f);
+                write!(f, " | ");
+                (*rhs.clone()).fmt(f);
+            },
+            FormulaTy::And(lhs, rhs) => {
+                (*lhs.clone()).fmt(f);
+                write!(f, " & ");
+                (*rhs.clone()).fmt(f);
+            },
+            FormulaTy::Finally(inner) => {
+                write!(f, "F ");
+                (*inner.clone()).fmt(f);
+            },
+            FormulaTy::Next(inner) => {
+                write!(f, "X ");
+                (*inner.clone()).fmt(f);
+            },
+            FormulaTy::Global(inner) => {
+                write!(f, "G ");
+                (*inner.clone()).fmt(f);
+            },
+            FormulaTy::Until(lhs, rhs) => {
+                (*lhs.clone()).fmt(f);
+                write!(f, " U ");
+                (*rhs.clone()).fmt(f);
+            },
+            FormulaTy::Release(lhs, rhs) => {
+                (*lhs.clone()).fmt(f);
+                write!(f, " R ");
+                (*rhs.clone()).fmt(f);
+            },
+            _ => {},
+        }
+        return Ok(());
+    }
 }
 
 pub type FormulaSet = HashSet<FormulaTy>;

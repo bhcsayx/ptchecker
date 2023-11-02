@@ -1,4 +1,6 @@
 use bimap::BiMap;
+use petgraph::Graph;
+use petgraph::graph::*;
 use std::collections::HashMap;
 
 pub mod parser;
@@ -91,5 +93,72 @@ impl PTNet {
 
     fn is_place(&self, idx: &usize) -> bool {
         self.places.contains_key(idx)
+    }
+
+    pub fn reachability_graph(&self) -> Graph::<HashMap<usize, usize>, String> {
+        // Construct reachability graph, nodes for markings and edges for transition name
+        let mut res = Graph::<HashMap<usize, usize>, String>::new();
+        let mut node_map = HashMap::<NodeIndex, HashMap<usize, usize>>::new();
+        // Fetch initial marking
+        let mut init_marking = HashMap::new();
+        for (k, p) in self.places.iter() {
+            let val = if let Marking::Plain(size) = p.init {
+                size
+            }
+            else { 0 };
+            init_marking.insert(k.clone(), val.clone());
+        }
+        // println!("init: {:?}", init_marking);
+        let mut queue = Vec::new();
+        let idx = res.add_node(init_marking.clone());
+        queue.push(idx.clone());
+        node_map.insert(idx, init_marking);
+        while queue.len() != 0 {
+            let src_idx = queue.remove(0);
+            let marking = node_map.get(&src_idx).unwrap().clone();
+            for (k, t) in self.transitions.iter() {
+                let mut fireable = true;
+                for (place, size) in t.conditions.iter() {
+                    if marking[place] < *size {
+                        fireable = false;
+                        break;
+                    }
+                }
+                if fireable {
+                    println!("transition {:?} is fireable", t.name);
+                    println!("old marking: {:?}", marking);
+                    let mut new_marking = marking.clone();
+                    for (k, num) in t.conditions.iter() {
+                        let place = new_marking.get_mut(k).unwrap();
+                        *place -= num;
+                    }
+                    for (k, num) in t.effects.iter() {
+                        let place = new_marking.get_mut(k).unwrap();
+                        *place += num;
+                    }
+                    println!("new marking: {:?}", new_marking);
+                    let mut added = false;
+                    for (k, m) in node_map.iter() {
+                        if *m == new_marking {
+                            // println!("repeated marking: {:?}", new_marking);
+                            added = true;
+                            res.add_edge(src_idx.clone(), k.clone(), format!("Fireability({:?})", t.name));
+                            break;
+                        }
+                    }
+                    if !added {
+                        // println!("new marking: {:?}", new_marking);
+                        let dst_idx = res.add_node(new_marking.clone());
+                        println!("new node: {:?} {:?}", dst_idx, new_marking);
+                        node_map.insert(dst_idx.clone(), new_marking.clone());
+                        res.add_edge(src_idx.clone(), dst_idx.clone(), format!("Fireability({:?})", t.name));
+                        queue.push(dst_idx);
+                        break;
+                    }
+                }
+            }
+        }
+        println!("res: {:?}", res);
+        res
     }
 }
