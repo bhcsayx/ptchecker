@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::collections::hash_set::Iter;
+use std::hash::{Hash, Hasher};
 
 pub mod parser;
 
@@ -45,20 +47,20 @@ impl std::fmt::Debug for FormulaTy {
             FormulaTy::Prop(atom) => {
                 match atom {
                     PTAtom::Cardinality(lhs, rhs) => {
-                        write!(f, "C({} <= {})", lhs, rhs);
+                        write!(f, "Card({} <= {})", lhs, rhs);
                     },
                     PTAtom::Fireability(inner) => {
-                        write!(f, "F({})", inner);
+                        write!(f, "Fire({})", inner);
                     },
                 }
             },
             FormulaTy::Neg(atom) => {
                 match atom {
                     PTAtom::Cardinality(lhs, rhs) => {
-                        write!(f, "C({} <= {})", lhs, rhs);
+                        write!(f, "!Card({} <= {})", lhs, rhs);
                     },
                     PTAtom::Fireability(inner) => {
-                        write!(f, "F({})", inner);
+                        write!(f, "!Fire({})", inner);
                     },
                 }
             },
@@ -67,14 +69,18 @@ impl std::fmt::Debug for FormulaTy {
                 (*inner.clone()).fmt(f);
             },
             FormulaTy::Or(lhs, rhs) => {
+                write!(f, "(");
                 (*lhs.clone()).fmt(f);
                 write!(f, " | ");
                 (*rhs.clone()).fmt(f);
+                write!(f, ")");
             },
             FormulaTy::And(lhs, rhs) => {
+                write!(f, "(");
                 (*lhs.clone()).fmt(f);
                 write!(f, " & ");
                 (*rhs.clone()).fmt(f);
+                write!(f, ")");
             },
             FormulaTy::Finally(inner) => {
                 write!(f, "F ");
@@ -98,10 +104,91 @@ impl std::fmt::Debug for FormulaTy {
                 write!(f, " R ");
                 (*rhs.clone()).fmt(f);
             },
+            FormulaTy::Forall(inner) => {
+                write!(f, "A ");
+                (*inner.clone()).fmt(f);
+            },
             _ => {},
         }
         return Ok(());
     }
 }
 
-pub type FormulaSet = HashSet<FormulaTy>;
+// Wrapper for hashset to implement hash thus enable storage by bimap.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FormulaSet {
+    pub set: HashSet<FormulaTy>,
+}
+
+impl Hash for FormulaSet {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for elem in self.set.iter() {
+            elem.hash(state);
+        }
+    }
+}
+
+impl FromIterator<FormulaTy> for FormulaSet {
+    #[inline]
+    fn from_iter<I: IntoIterator<Item = FormulaTy>>(iter: I) -> FormulaSet {
+        let mut set: HashSet<FormulaTy> = HashSet::with_hasher(Default::default());
+        set.extend(iter);
+        FormulaSet {
+            set: set,
+        }
+    }
+}
+
+impl FormulaSet {
+    pub fn new() -> Self {
+        FormulaSet {
+            set: HashSet::new(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.set.len()
+    }
+
+    pub fn insert(&mut self, value: FormulaTy) {
+        self.set.insert(value);
+    }
+
+    pub fn remove(&mut self, value: &FormulaTy) {
+        self.set.remove(value);
+    }
+
+    pub fn contains(&self, value: &FormulaTy) -> bool {
+        self.set.contains(value)
+    }
+
+    pub fn union(&self, other: &FormulaSet) -> FormulaSet {
+        let mut res = HashSet::new();
+        for i in self.set.union(&other.set) {
+            res.insert(i.clone());
+        }
+        FormulaSet {
+            set: res,
+        }
+    }
+
+    pub fn intersection(&self, other: &FormulaSet) -> FormulaSet {
+        let mut res = HashSet::new();
+        for i in self.set.intersection(&other.set) {
+            res.insert(i.clone());
+        }
+        FormulaSet {
+            set: res,
+        }
+    }
+
+    pub fn difference(&self, other: &FormulaSet) -> FormulaSet {
+        let mut res = HashSet::new();
+        for i in self.set.difference(&other.set) {
+            res.insert(i.clone());
+        }
+        FormulaSet {
+            set: res,
+        }
+    }
+}

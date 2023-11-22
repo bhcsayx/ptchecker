@@ -1,6 +1,7 @@
 use ptchecker::logics::*;
 use ptchecker::logics::parser::*;
 use ptchecker::ltl::*;
+use ptchecker::ltl::translator::*;
 use ptchecker::petri::*;
 use ptchecker::petri::parser::*;
 use ptchecker::utils::*;
@@ -10,21 +11,32 @@ use std::path::Path;
 use std::process::exit;
 
 fn ltl_check(model: &PTNet, input: &Formula) {
-    println!("formula: {:?}", input.ty);
-    // Test formula negation
-    println!("negated: {:?}", ltl_negate(input.ty.clone()));
-    // Test formula simplification
-    let simplified = ltl_simplify(ltl_negate(input.ty.clone()));
-    println!("simplified: {:?}", simplified);
-    let sub = ltl_subformulas(simplified.clone());
-    for f in sub.iter() {
-        println!("subf: {:?}", f);
-    }
-    if let FormulaTy::Forall(inner) = simplified {
-        let graph = build_graph(*inner.clone());
-        print_automaton(graph, sub.clone());
-        // model.reachability_graph();
-    }
+    // Simple tests:
+    let test1 = Formula {
+        name: "test1".to_string(),
+        ty: FormulaTy::Forall(Box::new(FormulaTy::Until(
+            Box::new(FormulaTy::Prop(PTAtom::Fireability("a".to_string()))),
+            Box::new(FormulaTy::Prop(PTAtom::Fireability("b".to_string()))),
+        )))
+    };
+
+    let test2 = Formula {
+        name: "test2".to_string(),
+        ty: FormulaTy::Forall(Box::new(FormulaTy::Not(
+            Box::new(FormulaTy::And(
+                Box::new(FormulaTy::Global(Box::new(FormulaTy::Finally(
+                    Box::new(FormulaTy::Prop(PTAtom::Fireability("p".to_string()))),
+                )))),
+                Box::new(FormulaTy::Finally(Box::new(FormulaTy::And(
+                    Box::new(FormulaTy::Prop(PTAtom::Fireability("q".to_string()))),
+                    Box::new(FormulaTy::Global(Box::new(FormulaTy::Neg(PTAtom::Fireability("r".to_string())))))
+                )))),
+            ))
+        )))
+    };
+    
+    build_automaton_cav01(&test2)
+    // build_automaton_pstv95(input);
 }
 
 fn old_main() {
