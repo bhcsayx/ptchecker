@@ -9,6 +9,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 pub mod vwaa;
+pub mod gba;
 pub mod translator;
 
 use crate::ltl::translator::*;

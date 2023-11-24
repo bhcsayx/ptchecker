@@ -106,7 +106,13 @@ pub fn vwaa_delta(f: FormulaTy) -> HashSet<(FormulaSet, FormulaTy)> {
             let res_left = vwaa_cap_delta(*rhs.clone());
             let res_right = vwaa_cap_delta(*lhs.clone()).union(&res).map(|i| i.clone()).collect();
             return vwaa_product(res_left, res_right);
-        }, 
+        },
+        FormulaTy::Or(lhs, rhs) => {
+            return vwaa_cap_delta(f.clone());
+        }
+        FormulaTy::And(lhs, rhs) => {
+            return vwaa_cap_delta(f.clone());
+        } 
         _ => {return res;},
     }
 }
