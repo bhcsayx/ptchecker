@@ -11,173 +11,11 @@ use crate::ltl::vwaa::*;
 use crate::ltl::gba::*;
 use crate::utils::*;
 
-pub struct PSTV95Translator {
-    pub f: FormulaTy,
-    // pub subf: FormulaSet,
-    pub nodes_num: usize,
-    pub incoming: HashMap<usize, HashSet<usize>>,
-    pub now: BiMap<usize, FormulaSet>,
-    pub next: BiMap<usize, FormulaSet>,
-}
-
-impl PSTV95Translator {
-
-    pub fn init(f: &FormulaTy) -> Self {
-        let mut incoming = HashMap::new();
-        let mut now: BiMap<usize, FormulaSet> = BiMap::new();
-        let mut next: BiMap<usize, FormulaSet> = BiMap::new();
-
-        // Initial node
-        incoming.insert(0, HashSet::new());
-        now.insert(0, FormulaSet::new());
-        next.insert(0, FormulaSet::new());
-
-        PSTV95Translator {
-            f: f.clone(),
-            nodes_num: 1,
-            incoming: incoming,
-            now: now,
-            next: next,
-        }
-    }
-
-    pub fn run(&mut self) {
-        println!("f: {:?}", self.f);
-        let init_curr = FormulaSet::from_iter(vec![self.f.clone()]);
-        let init_old = FormulaSet::new();
-        let init_next = FormulaSet::new();
-        let init_incoming = HashSet::from_iter(vec![0]);
-        self.expand(init_curr, init_old, init_next, init_incoming);
-        println!("now: {:?}", self.now);
-        println!("next: {:?}", self.next);
-        println!("incoming: {:?}", self.incoming);
-    }
-
-    pub fn expand(&mut self, curr: FormulaSet, old: FormulaSet, next: FormulaSet, incoming: HashSet<usize>) {
-        if curr.len() == 0 {
-            if self.now.contains_right(&old) && self.next.contains_right(&next) {
-                let now_idx = self.now.get_by_right(&old).unwrap().clone();
-                let next_idx = self.next.get_by_right(&next).unwrap().clone();
-                if now_idx == next_idx {
-                    let mut incoming_set = self.incoming.get(&now_idx).unwrap().clone();
-                    incoming_set = incoming_set.union(&incoming).map(|i| i.clone()).collect();
-                    let incoming_ref = self.incoming.get_mut(&now_idx).unwrap();
-                    *incoming_ref = incoming_set;
-                }
-                else {
-                    let new_node = self.nodes_num.clone();
-                    self.incoming.insert(new_node.clone(), incoming.clone());
-                    self.next.insert(new_node.clone(), next.clone());
-                    self.now.insert(new_node.clone(), old.clone());
-                    self.nodes_num += 1;
-                    let curr_incoming = HashSet::from_iter(vec![new_node.clone()]);
-                    self.expand(next.clone(), FormulaSet::new(), FormulaSet::new(), curr_incoming);
-                }
-            }
-            else {
-                let new_node = self.nodes_num.clone();
-                self.incoming.insert(new_node.clone(), incoming.clone());
-                self.next.insert(new_node.clone(), next.clone());
-                self.now.insert(new_node.clone(), old.clone());
-                self.nodes_num += 1;
-                let curr_incoming = HashSet::from_iter(vec![new_node.clone()]);
-                self.expand(next.clone(), FormulaSet::new(), FormulaSet::new(), curr_incoming);
-            }
-        }
-        else {
-            let elem = curr.set.clone().into_iter().collect::<Vec<_>>()[0].clone();
-            let mut new_curr = curr.clone();
-            new_curr.remove(&elem);
-            let mut new_old = old.clone();
-            new_old.insert(elem.clone());
-            match elem.clone() {
-                FormulaTy::False => {},
-                FormulaTy::True => {
-                    self.expand(new_curr, new_old, next, incoming);
-                },
-                FormulaTy::Prop(atom) => {
-                    if !old.contains(&FormulaTy::Neg(atom)) {
-                        self.expand(new_curr, new_old, next, incoming);
-                    }
-                },
-                FormulaTy::Neg(atom) => {
-                    if !old.contains(&FormulaTy::Prop(atom)) {
-                        self.expand(new_curr, new_old, next, incoming);
-                    }
-                },
-                FormulaTy::And(lhs, rhs) => {
-                    let mut and_curr = FormulaSet::from_iter(vec![*lhs.clone(), *rhs.clone()]);
-                    and_curr = and_curr.difference(&new_old);
-                    and_curr = and_curr.union(&new_curr);
-                    self.expand(and_curr, new_old, next, incoming);
-                },
-                FormulaTy::Next(inner) => {
-                    let mut next_next = next.clone();
-                    next_next.insert(*inner.clone());
-                    self.expand(new_curr, new_old, next_next, incoming);
-                },
-                FormulaTy::Or(lhs, rhs) => {
-                    // First expand
-                    let mut or_curr1 = FormulaSet::from_iter(vec![*rhs.clone()]);
-                    or_curr1 = or_curr1.difference(&new_old);
-                    or_curr1 = or_curr1.union(&new_curr);
-                    let mut or_next1 = next.clone();
-                    self.expand(or_curr1, new_old.clone(), or_next1, incoming.clone());
-
-                    // Second expand
-                    let mut or_curr2 = FormulaSet::from_iter(vec![*lhs.clone()]);
-                    or_curr2 = or_curr2.difference(&new_old);
-                    or_curr2 = or_curr2.union(&new_curr);
-                    self.expand(or_curr2, new_old, next, incoming);
-                },
-                FormulaTy::Until(lhs, rhs) => {
-                    // First expand
-                    let mut until_curr1 = FormulaSet::from_iter(vec![*lhs.clone()]);
-                    until_curr1 = until_curr1.difference(&new_old);
-                    until_curr1 = until_curr1.union(&new_curr);
-                    let mut until_next1 = next.clone();
-                    until_next1.insert(elem.clone());
-                    self.expand(until_curr1, new_old.clone(), until_next1, incoming.clone());
-
-                    // Second expand
-                    let mut until_curr2 = FormulaSet::from_iter(vec![*rhs.clone()]);
-                    until_curr2 = until_curr2.difference(&new_old);
-                    until_curr2 = until_curr2.union(&new_curr);
-                    self.expand(until_curr2, new_old, next, incoming);
-                },
-                FormulaTy::Release(lhs, rhs) => {
-                    // First expand
-                    let mut release_curr1 = FormulaSet::from_iter(vec![*rhs.clone()]);
-                    release_curr1 = release_curr1.difference(&new_old);
-                    release_curr1 = release_curr1.union(&new_curr);
-                    let mut release_next1 = next.clone();
-                    release_next1.insert(elem.clone());
-                    self.expand(release_curr1, new_old.clone(), release_next1, incoming.clone());
-
-                    // Second expand
-                    let mut release_curr2 = FormulaSet::from_iter(vec![*rhs.clone(), *rhs.clone()]);
-                    release_curr2 = release_curr2.difference(&new_old);
-                    release_curr2 = release_curr2.union(&new_curr);
-                    self.expand(release_curr2, new_old, next, incoming);
-                },
-                _ => {
-                    println!("Unhandled formula detected: {:?}", elem);
-                }
-            }
-        }
-        return;
-    }
-
-    pub fn print_automaton(&self) {
-
-    }
-}
-
 pub struct CAV01Translator {
     pub f: FormulaTy,
     pub sub_f: HashSet<FormulaTy>,
     pub atrans: HashMap<FormulaTy, Vec<(FormulaSet, FormulaTy)>>,
-    pub gtrans: HashMap<FormulaSet, Vec<(FormulaSet, FormulaSet)>>,
+    pub gtrans: HashMap<FormulaSet, Vec<(FormulaSet, FormulaSet, FormulaSet)>>,
 }
 
 impl CAV01Translator {
@@ -251,8 +89,35 @@ impl CAV01Translator {
                 }
             }
         }
-        // println!("trans: {:#?}", self.atrans);
+        // println!("atrans: {:#?}", self.atrans);
         (inits, finals)
+    }
+
+    pub fn gba_final(&self, state: &FormulaSet, action: &FormulaSet, dest: &FormulaSet, finals: &FormulaSet) -> FormulaSet {
+        let mut res = FormulaSet::new();
+        let mut destination = dest.clone();
+        for f in finals.set.iter() {
+            if !self.atrans.contains_key(f) {
+                println!("Error of state {:?} not exist in atrans", f);
+                break;
+            }
+            if !destination.contains(f) {
+                // println!("marking final: {:?} {:?}", f, dest);
+                res.insert(f.clone());
+                continue;
+            }
+            else {
+                destination.remove(f);
+                for (a, d) in self.atrans[f].iter() {
+                    if a.set.is_subset(&action.set) && (destination.contains(d) || *d == FormulaTy::True) {
+                        res.insert(f.clone());
+                        break;
+                    }
+                }
+                destination.insert(f.clone());
+            }
+        }
+        res
     }
 
     pub fn gba_build(&mut self, inits: &FormulaSet, finals: &FormulaSet) {
@@ -275,6 +140,9 @@ impl CAV01Translator {
             for s in state.set.iter() {
                 trans = vwaa_product(trans.clone(), vwaa_delta(s.clone()));
             }
+            // for (a, d) in trans.iter() {
+            //     println!("trans from {:?} to {:?} under {:?}", state, d, a);
+            // }
 
             for (a, d) in trans.iter() {
                 let d_set = break_conjs(d);
@@ -282,36 +150,47 @@ impl CAV01Translator {
                 if a_set.len() > 1 {
                     a_set.remove(&FormulaTy::True);
                 }
-                // println!("tran: {:?} to: {:?}", a_set, d_set);
-                if self.gtrans.contains_key(&state) {
-                    let s_ref = self.gtrans.get_mut(&state).unwrap();
-                    s_ref.push((a_set.clone(), d_set.clone()));
+                // println!("tran broken: {:?} -> {:?} on {:?}", state, d_set, a_set);
+                let f_set = self.gba_final(&state, &a_set, &d_set, finals);
+                // println!("tran with final: {:?} -> {:?} on {:?}, final: {:?}", state, d_set, a_set, f_set);
+                if !processed.contains(&d_set) {
+                    if !unprocessed.contains(&d_set) {
+                        unprocessed.push(d_set.clone());
+                    }
+                }
+                if !self.gtrans.contains_key(&state) {
+                    self.gtrans.insert(state.clone(), vec![(a_set.clone(), d_set.clone(), f_set.clone())]);
                 }
                 else {
-                    self.gtrans.insert(state.clone(), vec![(a_set.clone(), d_set.clone())]);
-                }
-                if !processed.contains(&d_set) {
-                    unprocessed.push(d_set.clone());
+                    let s_ref = self.gtrans.get_mut(&state).unwrap();
+                    let mut insert_flag = true;
+                    for (a, d, f) in s_ref.iter_mut() {
+                        if a.set.is_subset(&a_set.set) && d.set.is_subset(&d_set.set) && *f == f_set {
+                            insert_flag = false;
+                        }
+                        else if a_set.set.is_subset(&a.set.clone()) && d_set.set.is_subset(&d.set.clone()) && *f == f_set {
+                            *a = a_set.clone();
+                            *d = d_set.clone();
+                            insert_flag = false;
+                        }
+                    }
+                    if (insert_flag) {
+                        s_ref.push((a_set.clone(), d_set.clone(), f_set.clone()));
+                    }
                 }
             }
         }
-        println!("trans: {:#?}", self.gtrans);
+        // println!("gtrans: {:#?}", self.gtrans);
+        // for (k, v) in self.gtrans.iter() {
+        //     for (a, d, f) in v.iter() {
+        //         println!("trans: {:?} -> {:?} under {:?}, final {:?}", k, d, a, f);
+        //     }
+        // }
     }
 
     pub fn run(&mut self) {
         let (inits, finals) = self.vwaa_build();
         self.gba_build(&inits, &finals);
-    }
-}
-
-pub fn build_automaton_pstv95(f: &Formula) {
-    println!("Original f: {:?}", f.ty.clone());
-    println!("Negated f: {:?}", ltl_negate(f.ty.clone()));
-    let preprocessed = ltl_simplify(ltl_negate(f.ty.clone()));
-    if let FormulaTy::Forall(inner) = &preprocessed { // Make sure this is an LTL formula
-        let mut translator = PSTV95Translator::init(&*inner);
-        translator.run();
-        translator.print_automaton();
     }
 }
 
