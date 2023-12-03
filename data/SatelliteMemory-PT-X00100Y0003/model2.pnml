@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<pnml xmlns="http://www.pnml.org/version-2009/grammar/pnml">
+ <net id="SatelliteMemory-PT-X00100Y0003" type="http://www.pnml.org/version-2009/grammar/ptnet">
+  <name>
+   <text>SatelliteMemory-PT-X00100Y0003</text>
+  </name>
+ <page id="g-9194-534CE-1">
+  <place id="p1">
+  <name>
+   <text>p1</text>
+  </name>
+   <initialMarking>
+    <text>1</text>
+   </initialMarking>
+  </place>
+  <place id="p2">
+  <name>
+   <text>p2</text>
+  </name>
+  </place>
+  <place id="p3">
+   <name>
+    <text>p3</text>
+   </name>
+   <initialMarking>
+    <text>1</text>
+   </initialMarking>
+  </place>
+  <place id="p4">
+   <name>
+    <text>p4</text>
+   </name>
+  </place>
+  <transition id="t1">
+  <name>
+   <text>t1</text>
+  </name>
+  </transition>
+  <transition id="t2">
+   <name>
+    <text>t2</text>
+   </name>
+  </transition>
+  <arc id="e1" source="t1" target="p1">
+  </arc>
+  <arc id="e2" source="p1" target="t1">
+  </arc>
+  <arc id="e3" source="t1" target="p2">
+  </arc>
+  <arc id="e4" source="t2" target="p3">
+  </arc>
+  <arc id="e5" source="p3" target="t2">
+  </arc>
+  <arc id="e6" source="t2" target="p4">
+  </arc>
+ </page>
+ </net>
+</pnml>
