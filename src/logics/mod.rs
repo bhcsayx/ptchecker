@@ -1,6 +1,9 @@
 pub mod parser;
+pub mod ctl;
+pub mod transys;
 
-#[derive(Debug, Clone, PartialEq)]
+
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub enum PTAtom {
     Cardinality(String, String),
     Fireability(String),
@@ -12,7 +15,7 @@ pub struct Formula {
     pub ty: FormulaTy,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash, Eq)]
 pub enum FormulaTy {
     True,
     False,

@@ -7,6 +7,7 @@ use ptchecker::utils::*;
 use std::env;
 use std::path::Path;
 use std::process::exit;
+use ptchecker::logics::ctl::almc;
 
 fn old_main() {
     // let nets = pnets_read_ptnets_from("data/SatelliteMemory-PT-X00100Y0003.pnml");
@@ -30,9 +31,18 @@ fn main() {
         println!("No model found, exiting\n");
         exit(0);
     }
-    // println!("read nets: {:#?}", nets[0]);
-    let input_path = Path::new(args[1].as_str()).join("LTLFireability.xml");
+    println!("read nets: {:#?}", nets[0]);
+    let input_path = Path::new(args[1].as_str()).join("CTLFireability.xml");
     if let Ok(formulas) = parse_formulas(input_path.to_str().unwrap()) {
-        println!("formula: {:?}", formulas[15]);
+        // for f in formulas {
+        //     println!("formula: {:?}", f);
+        // }
+        println!("{}", test(&nets[0], &formulas[15]))
     }
+}
+
+fn test(model: &PTNet, formula: &Formula) -> bool {
+    use ptchecker::logics::transys::*;
+    let tran = TranSys::from_petri(&model);
+    almc(tran, 0, formula.ty.clone())
 }
