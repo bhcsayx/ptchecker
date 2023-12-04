@@ -16,6 +16,7 @@ pub struct CAV01Translator {
     pub sub_f: HashSet<FormulaTy>,
     pub atrans: HashMap<FormulaTy, Vec<(FormulaSet, FormulaTy)>>,
     pub gtrans: HashMap<FormulaSet, Vec<(FormulaSet, FormulaSet, FormulaSet)>>,
+    pub trans: HashMap<(FormulaSet, usize), Vec<(FormulaSet, FormulaSet, usize)>>,
 }
 
 impl CAV01Translator {
@@ -25,6 +26,7 @@ impl CAV01Translator {
             sub_f: ltl_subformulas(f.clone()),
             atrans: HashMap::new(),
             gtrans: HashMap::new(),
+            trans: HashMap::new(),
         }
     }
 
@@ -101,12 +103,13 @@ impl CAV01Translator {
                 println!("Error of state {:?} not exist in atrans", f);
                 break;
             }
-            if !destination.contains(f) {
+            if !state.contains(f) {
                 // println!("marking final: {:?} {:?}", f, dest);
                 res.insert(f.clone());
                 continue;
             }
             else {
+                let in_flag = destination.contains(&f);
                 destination.remove(f);
                 for (a, d) in self.atrans[f].iter() {
                     if a.set.is_subset(&action.set) && (destination.contains(d) || *d == FormulaTy::True) {
@@ -114,7 +117,9 @@ impl CAV01Translator {
                         break;
                     }
                 }
-                destination.insert(f.clone());
+                if in_flag {
+                    destination.insert(f.clone());
+                }
             }
         }
         res
@@ -175,7 +180,7 @@ impl CAV01Translator {
                         }
                     }
                     if (insert_flag) {
-                        s_ref.push((a_set.clone(), d_set.clone(), f_set.clone()));
+                        s_ref.insert(0, (a_set.clone(), d_set.clone(), f_set.clone()));
                     }
                 }
             }
@@ -188,9 +193,129 @@ impl CAV01Translator {
         // }
     }
 
+    pub fn ba_final(&self, finals: &Vec<FormulaTy>, tran: &(FormulaSet, FormulaSet, FormulaSet), prev: usize) -> usize {
+        if prev != finals.len() && tran.2.contains(&finals[prev.clone()]) {
+            return self.ba_final(finals, tran, prev + 1);
+        }
+        return prev;
+    }
+
+    pub fn ba_build(&mut self, inits: &FormulaSet, finals: &FormulaSet) {
+        let mut unprocessed = vec![];
+        let mut processed = vec![];
+        let mut tmp_trans = HashMap::new();
+        let mut finals_vec: Vec<FormulaTy> = finals.set.iter().map(|f| f.clone()).collect();
+        println!("finals vec: {:?}", finals_vec);
+        for i in inits.set.iter() {
+            let init_set = break_conjs(i);
+            println!("init set: {:?}", init_set);
+            for (k, v) in self.gtrans.iter() {
+                if *k == init_set {
+                    // println!("Key found: {:#?}", self.gtrans[k]);
+                    for tran in self.gtrans[k].iter() {
+                        let fin = self.ba_final(&finals_vec, tran, 0);
+                        // println!("tran: {:?} {:?} {:?}", tran.1, tran.2, fin);
+                        unprocessed.insert(0, (tran.1.clone(), fin.clone()));
+                    }
+                    break;
+                }
+            }
+        }
+
+        while unprocessed.len() != 0 {
+            let (gstate, fin) = unprocessed.remove(0);
+            processed.push((gstate.clone(), fin.clone()));
+            // println!("Handling bstate: {:?} {:?}", gstate, fin);
+            for (k, v) in self.gtrans.iter() {
+                if *k == gstate {
+                    for (a_set, d_set, f_set) in self.gtrans[k].iter() {
+                        let new_fin = self.ba_final(&finals_vec, &(a_set.clone(), d_set.clone(), f_set.clone()), 
+                            if fin == finals_vec.len() { 0 } else { fin.clone() });
+                        let mut new_flag = true;
+                        for (s, fin) in unprocessed.iter() {
+                            if *s == d_set.clone() && *fin == new_fin {
+                                new_flag = false;
+                            }
+                        }
+                        for (s, fin) in processed.iter() {
+                            if *s == d_set.clone() && *fin == new_fin {
+                                new_flag = false;
+                            }
+                        }
+                        if new_flag {
+                            // println!("find new state: {:?}", (d.clone(), new_fin.clone()));
+                            unprocessed.insert(0, (d_set.clone(), new_fin.clone()));
+                        }
+                        // else {
+                        //     // println!("find existing state: {:?}", (d.clone(), new_fin.clone()));
+                        // }
+                        if !tmp_trans.contains_key(&(gstate.clone(), fin)) {
+                            tmp_trans.insert((gstate.clone(), fin.clone()), vec![(a_set.clone(), d_set.clone(), new_fin.clone())]);
+                        }
+                        else {
+                            let s_ref = tmp_trans.get_mut(&(gstate.clone(), fin)).unwrap();
+                            let mut insert_flag = true;
+                            for (a, d, f) in s_ref.iter_mut() {
+                                if a.set.is_subset(&a_set.set) && d.set.is_subset(&d_set.set) && *f == new_fin {
+                                    insert_flag = false;
+                                }
+                                else if a_set.set.is_subset(&a.set.clone()) && d_set.set.is_subset(&d.set.clone()) && *f == new_fin {
+                                    *a = a_set.clone();
+                                    *d = d_set.clone();
+                                    insert_flag = false;
+                                }
+                            }
+                            if insert_flag {
+                                s_ref.insert(0, (a_set.clone(), d_set.clone(), new_fin.clone()));
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        // println!("trans: {:#?}", self.gtrans);
+        let mut expelled = HashSet::new();
+        for (k1, v1) in tmp_trans.iter() {
+            for (k2, v2) in tmp_trans.iter() {
+                if *k1 == *k2 || expelled.contains(k2) {
+                    continue;
+                }
+                if !((k1.1 + k2.1) == 2 * finals_vec.len() || k1.1 != finals_vec.len() && k2.1 != finals_vec.len()) {
+                    continue;
+                }
+                else {
+                    let set1: HashSet<&(FormulaSet, FormulaSet, usize)> = HashSet::from_iter(v1);
+                    let set2: HashSet<&(FormulaSet, FormulaSet, usize)> = HashSet::from_iter(v2);
+                    if set1 == set2 {
+                        expelled.insert(k1.clone());
+                        break;
+                    }
+                }
+            }
+        }
+        for (k, v) in tmp_trans.iter() {
+            if !expelled.contains(k) {
+                self.trans.insert(k.clone(), vec![]);
+                for (a, d, f) in v.iter() {
+                    if !expelled.contains(&(d.clone(), f.clone())) {
+                        let s_ref = self.trans.get_mut(k).unwrap();
+                        s_ref.push((a.clone(), d.clone(), f.clone()));
+                    }
+                }
+            }
+        }
+        for (k, v) in self.trans.iter() {
+            for (a, d, f) in v.iter() {
+                println!("trans: {:?} -> {:?} under {:?}", k, (d, f), a);
+            }
+        }
+    }
+
     pub fn run(&mut self) {
         let (inits, finals) = self.vwaa_build();
         self.gba_build(&inits, &finals);
+        self.ba_build(&inits, &finals);
     }
 }
 
