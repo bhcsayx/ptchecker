@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash};
-use crate::logics::FormulaTy;
+use crate::logics::{FormulaTy, PTAtom};
 use crate::petri::{Marking, Place, PTNet};
 
 pub(crate) type State = usize;
@@ -11,7 +11,7 @@ pub struct TranSys {
     states: HashSet<State>,
     state2conf: HashMap<State, Config>,
     transitions: HashMap<State, HashSet<State>>,
-    labels: HashMap<Box<FormulaTy>, HashSet<State>>,
+    labels: HashMap<String, HashSet<State>>,
 }
 
 impl TranSys {
@@ -46,11 +46,17 @@ impl TranSys {
         // }
     }
 
+    pub fn insert_fireable(&mut self, state: State, names: Vec<String>) {
+        for name in names {
+            self.labels.entry(name).or_insert_with(|| HashSet::new()).insert(state);
+        }
+    }
+
     pub fn states_from(&self, source: &State) -> Option<&HashSet<State>> {
         self.transitions.get(source)
     }
 
-    pub fn label_of(&self, f: &FormulaTy) -> Option<&HashSet<State>> {
+    pub fn label_of(&self, f: &String) -> Option<&HashSet<State>> {
         self.labels.get(f)
     }
 
@@ -60,6 +66,38 @@ impl TranSys {
 
     fn duplicate_config(&self, new_config: &Config) -> bool {
         self.state2conf.iter().any(|(_, config)| config == new_config)
+    }
+
+    fn merge_pair(&mut self, s1: State, s2: State) {
+        self.states.remove(&s2);
+        self.state2conf.remove(&s2);
+        self.transitions.remove(&s1);
+        for set in self.transitions.values_mut() {
+            if set.contains(&s2) {
+                set.remove(&s2);
+                set.insert(s1);
+            }
+        }
+    }
+
+    fn merge_graph(&mut self) {
+        let mut tmp = vec![];
+        for i in 0..self.states.len() {
+            let ith = self.states.get(&i).unwrap();
+            for j in i + 1..self.states.len() {
+                let jth = self.states.get(&j).unwrap();
+                if let Some(&ref config1) = self.state2conf.get(ith) {
+                    if let Some(&ref config2) = self.state2conf.get(jth) {
+                        if config1 == config2 {
+                            tmp.push((*ith, *jth));
+                        }
+                    }
+                }
+            }
+        }
+        for (ith, jth) in tmp {
+            self.merge_pair(ith, jth);
+        }
     }
 
     pub fn from_petri(petri: &PTNet) -> TranSys {
@@ -84,6 +122,7 @@ impl TranSys {
                 continue
             }
 
+            let mut fireable = vec![];
             for (_, transition) in petri.transitions.iter() {
                 let mut fire = true;
                 for (ind_p, capacity) in transition.conditions.iter() {
@@ -95,6 +134,7 @@ impl TranSys {
                     }
                 }
                 if fire {
+                    fireable.push(transition.name.clone());
                     let mut new_config = config.clone();
                     for (ind_p, capacity) in transition.conditions.iter() {
                         let tokens =
@@ -123,7 +163,9 @@ impl TranSys {
                     println!("{:?}", (index_old, index_all, new_config))
                 }
             }
+            tran.insert_fireable(index_old, fireable);
         }
+        tran.merge_graph();
         tran
     }
 }

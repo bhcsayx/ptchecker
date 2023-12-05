@@ -1,5 +1,5 @@
 use std::collections::{HashSet, HashMap};
-use crate::logics::FormulaTy;
+use crate::logics::{FormulaTy, PTAtom};
 use crate::logics::transys::{State, TranSys};
 
 
@@ -105,7 +105,11 @@ pub fn check(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, For
                 info.insert((s, f.clone()), false);
             }
             FormulaTy::Prop(f1) => {
-                if let Some(&ref set) = T.label_of(&f) {
+                let name = match f1 {
+                    PTAtom::Fireability(name) => {name}
+                    _ => { panic!("Cardinality not supported") }
+                };
+                if let Some(&ref set) = T.label_of(&name) {
                     info.insert((s, f),
                                 if set.contains(&s) { true } else { false }
                     );
