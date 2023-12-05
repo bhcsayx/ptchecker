@@ -34,10 +34,10 @@ fn main() {
     println!("read nets: {:#?}", nets[0]);
     let input_path = Path::new(args[1].as_str()).join("CTLFireability.xml");
     if let Ok(formulas) = parse_formulas(input_path.to_str().unwrap()) {
-        // for f in formulas {
-        //     println!("formula: {:?}", f);
-        // }
-        println!("{}", test(&nets[0], &formulas[15]))
+        for f in formulas {
+            println!("formula: {:?}\n", f);
+        }
+        // println!("{}", test(&nets[0], &formulas[15]))
     }
 }
 
