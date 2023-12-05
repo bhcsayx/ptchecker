@@ -1,5 +1,6 @@
 use ptchecker::logics::*;
 use ptchecker::logics::parser::*;
+use ptchecker::logics::transys::*;
 use ptchecker::ltl::*;
 use ptchecker::ltl::translator::*;
 use ptchecker::petri::*;
@@ -35,7 +36,8 @@ fn ltl_check(model: &PTNet, input: &Formula) {
         )))
     };
     
-    build_automaton_cav01(&test2)
+    // build_automaton_cav01(&test2)
+    let tran = TranSys::from_petri(&model);
     // build_automaton_pstv95(input);
 }
 

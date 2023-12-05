@@ -1,0 +1,80 @@
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-00
+  "Automatically generated"
+  is:
+    A X G ("t8"? | ("t4"? & !"t7"?))
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-01
+  "Automatically generated"
+  is:
+    A F G F !F ("t4"? | X "t4"?)
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-02
+  "Automatically generated"
+  is:
+    A F (X "t2"? & (F "t7"? U F "t9"?))
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-03
+  "Automatically generated"
+  is:
+    A F (X !F "t7"? | F X G F !"t5"?)
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-04
+  "Automatically generated"
+  is:
+    A ("t8"? & G F "t7"? & (F ("t7"? U G "t9"?) U "t2"?))
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-05
+  "Automatically generated"
+  is:
+    A !X G (G "t6"? | F "t6"?)
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-06
+  "Automatically generated"
+  is:
+    A X (!"t2"? & X ((X "t3"? U "t2"?) | X G "t2"?))
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-07
+  "Automatically generated"
+  is:
+    A G (F G "t6"? & !("t7"? U "t2"?))
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-08
+  "Automatically generated"
+  is:
+    A G "t8"?
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-09
+  "Automatically generated"
+  is:
+    A (G ("t5"? | "t4"?) & F !"t1"?)
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-10
+  "Automatically generated"
+  is:
+    A X G (!X (F "t3"? & F !"t0"?) & X "t0"?)
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-11
+  "Automatically generated"
+  is:
+    A G F X X ((!"t2"? & ("t8"? | "t6"?)) | !G !"t6"?)
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-12
+  "Automatically generated"
+  is:
+    A F (("t2"? & X F "t5"? & (X "t2"? U "t5"?)) U X !"t3"?)
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-13
+  "Automatically generated"
+  is:
+    A ("t2"? U (G !"t0"? U ("t3"? & F X "t9"?)))
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-14
+  "Automatically generated"
+  is:
+    A F !("t0"? & "t2"? & F (X "t4"? U F "t2"?))
+  end.
+Property SatelliteMemory-PT-X00100Y0003-LTLFireability-15
+  "Automatically generated"
+  is:
+    A (X "t3"? | G X F (F ("t3"? U "t4"?) U "t6"?))
+  end.

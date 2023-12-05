@@ -64,8 +64,13 @@ impl TranSys {
         self.state2conf.get(&state)
     }
 
-    fn duplicate_config(&self, new_config: &Config) -> bool {
-        self.state2conf.iter().any(|(_, config)| config == new_config)
+    fn duplicate_config(&self, new_config: &Config) -> Option<usize> {
+        for (k, v) in self.state2conf.iter() {
+            if *v == *new_config {
+                return Some(k.clone());
+            }
+        }
+        return None;
     }
 
     fn merge_pair(&mut self, s1: State, s2: State) {
@@ -153,6 +158,13 @@ impl TranSys {
                         println!("{:?}", covers);
                         for (c) in covers {
                             new_config.insert(c, usize::MAX);
+                        }
+                    }
+                    if let Some(index_older) = tran.duplicate_config(&new_config) {
+                        println!("{:?} linking to previous state: {:?}", index_old, index_older);
+                        if index_old != index_older {
+                            tran.insert_transition(index_old, index_older);
+                            continue;
                         }
                     }
                     index_all += 1;
