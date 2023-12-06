@@ -5,7 +5,7 @@ use crate::petri::{Marking, Place, PTNet};
 
 pub(crate) type State = usize;
 
-type Config = HashMap<usize, usize>;
+pub type Config = HashMap<usize, usize>;
 
 pub struct TranSys {
     states: HashSet<State>,

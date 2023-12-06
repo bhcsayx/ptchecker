@@ -2,6 +2,7 @@ use ptchecker::logics::*;
 use ptchecker::logics::parser::*;
 use ptchecker::logics::transys::*;
 use ptchecker::ltl::*;
+use ptchecker::ltl::checker::*;
 use ptchecker::ltl::translator::*;
 use ptchecker::petri::*;
 use ptchecker::petri::parser::*;
@@ -36,8 +37,21 @@ fn ltl_check(model: &PTNet, input: &Formula) {
         )))
     };
     
-    build_automaton_cav01(input)
-    // let tran = TranSys::from_petri(&model);
+    if let Some((auto, fin)) = build_automaton_cav01(input) {
+        // let tran = TranSys::from_petri(&model);
+        let mut checker = LTLChecker::new(&model, auto, fin.clone());
+        let res = checker.check();
+        println!("checking res for formula {:?}: {:?}", input.ty, res);
+        if !res {
+            println!("Counterexample: ");
+            for state1 in checker.stack_1.iter() {
+                println!("{:?}", state1.1);
+            }
+            for state2 in checker.stack_2.iter() {
+                println!("loop {:?}", state2.1);
+            }
+        }
+    }
     // build_automaton_pstv95(input);
 }
 
@@ -66,9 +80,11 @@ fn main() {
     // println!("read nets: {:#?}", nets[0]);
     let input_path = Path::new(args[1].as_str()).join("LTLFireability.xml");
     if let Ok(formulas) = parse_formulas(input_path.to_str().unwrap()) {
-        for f in formulas.iter() {
-            // ltl_check(f);
-            ltl_check(&nets[0], f);
-        }
+        // for f in formulas.iter() {
+        //     // ltl_check(f);
+        //     ltl_check(&nets[0], f);
+        //     break;
+        // }
+        ltl_check(&nets[0], &formulas[10]);
     }
 }

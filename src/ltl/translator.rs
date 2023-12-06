@@ -46,7 +46,7 @@ impl CAV01Translator {
                 }
             }
         }
-        println!("states: {:?}", states);
+        // println!("states: {:?}", states);
 
         // VWAA alphabet
         let mut alphabet = HashSet::new();
@@ -57,11 +57,11 @@ impl CAV01Translator {
                 _ => {},
             }
         }
-        println!("alphabet: {:?}", powerset(&alphabet));
+        // println!("alphabet: {:?}", powerset(&alphabet));
 
         // VWAA initial states
         let inits = vwaa_bar(self.f.clone());
-        println!("initial state: {:?}", inits);
+        // println!("initial state: {:?}", inits);
 
         // VWAA final states
         let mut finals = FormulaSet::new();
@@ -70,7 +70,7 @@ impl CAV01Translator {
                 finals.insert(sub.clone());
             }
         }
-        println!("final state: {:?}", finals);
+        // println!("final state: {:?}", finals);
 
         let mut transitions = HashMap::<(FormulaTy, PTAtom), HashSet<FormulaTy>>::new();
 
@@ -95,12 +95,12 @@ impl CAV01Translator {
             }
         }
         // println!("atrans: {:#?}", self.atrans);
-        for (k, v) in self.atrans.iter() {
-            for t in v.iter() {
-                println!("atran: {:?} -- {:?} -> {:?}", k, t.0, t.1);
-            }
-        }
-        println!("keys: {:?}", self.atrans.keys());
+        // for (k, v) in self.atrans.iter() {
+        //     for t in v.iter() {
+        //         println!("atran: {:?} -- {:?} -> {:?}", k, t.0, t.1);
+        //     }
+        // }
+        // println!("keys: {:?}", self.atrans.keys());
         (inits, finals)
     }
 
@@ -198,11 +198,11 @@ impl CAV01Translator {
             }
         }
         // println!("gtrans: {:#?}", self.gtrans);
-        for (k, v) in self.gtrans.iter() {
-            for (a, d, f) in v.iter() {
-                println!("gtrans: {:?} -> {:?} under {:?}, final {:?}", k, d, a, f);
-            }
-        }
+        // for (k, v) in self.gtrans.iter() {
+        //     for (a, d, f) in v.iter() {
+        //         println!("gtrans: {:?} -> {:?} under {:?}, final {:?}", k, d, a, f);
+        //     }
+        // }
     }
 
     pub fn ba_final(&self, finals: &Vec<FormulaTy>, tran: &(FormulaSet, FormulaSet, FormulaSet), prev: usize) -> usize {
@@ -219,12 +219,12 @@ impl CAV01Translator {
         return finals.len();
     }
 
-    pub fn ba_build(&mut self, inits: &FormulaSet, finals: &FormulaSet) {
+    pub fn ba_build(&mut self, inits: &FormulaSet, finals: &FormulaSet) -> (Automaton::<(FormulaSet, usize), FormulaSet>, usize) {
         let mut unprocessed = vec![];
         let mut processed = vec![];
         let mut tmp_trans = HashMap::new();
         let mut finals_vec: Vec<FormulaTy> = finals.set.iter().map(|f| f.clone()).collect();
-        println!("finals vec: {:?}", finals_vec);
+        // println!("finals vec: {:?}", finals_vec);
         // for i in inits.set.iter() {
         //     let init_set = break_conjs(i);
         //     println!("init set: {:?}", init_set);
@@ -337,34 +337,54 @@ impl CAV01Translator {
                 }
             }
         }
+        let mut auto = Automaton::<(FormulaSet, usize), FormulaSet>::new();
         for (k, v) in self.trans.iter() {
-            // for (a, d, f) in v.iter() {
-            //     println!("trans: {:?} -> {:?} under {:?}", k, (d, f), a);
-            // }
+            if !auto.states.contains(k) {
+                auto.states.push(k.clone());
+            }
             if k.0 == *inits && k.1 == 0 {
-                println!("buchi init state: {:?}", k);
+                // println!("buchi init state: {:?}", k);
+                if !auto.init_states.contains(k) {
+                    auto.init_states.push(k.clone());
+                }
+            }
+            // if k.1 == finals_vec.len() {
+            //     println!("buchi acc state: {:?}", k);
+            // }
+            for (a, d, f) in v.iter() {
+                // println!("trans: {:?} -> {:?} under {:?}", k, (d, f), a);
+                if !auto.transitions.contains_key(&k.clone()) {
+                    auto.transitions.insert(k.clone(), vec![(a.clone(), (d.clone(), f.clone()))]);
+                }
+                else {
+                    let s_ref = auto.transitions.get_mut(&k.clone()).unwrap();
+                    s_ref.push((a.clone(), (d.clone(), f.clone())));
+                }
             }
         }
+        (auto, finals_vec.len())
         // println!("init: {:?}", inits);
         // println!("final: {:?}", finals);
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) -> (Automaton::<(FormulaSet, usize), FormulaSet>, usize) {
         let (inits, finals) = self.vwaa_build();
         self.gba_build(&inits, &finals);
-        self.ba_build(&inits, &finals);
+        return self.ba_build(&inits, &finals);
     }
 }
 
-pub fn build_automaton_cav01(f: &Formula) {
-    println!("Original f: {:?}", f.ty.clone());
-    println!("Negated f: {:?}", ltl_negate(f.ty.clone()));
+pub fn build_automaton_cav01(f: &Formula) -> Option<(Automaton::<(FormulaSet, usize), FormulaSet>, usize)> {
+    // println!("Original f: {:?}", f.ty.clone());
+    // println!("Negated f: {:?}", ltl_negate(f.ty.clone()));
     let preprocessed = ltl_simplify(ltl_negate(f.ty.clone()));
     if let FormulaTy::Forall(inner) = &preprocessed { // Make sure this is an LTL formula
-        println!("Simplified f: {:?}", inner);
+        // println!("Simplified f: {:?}", inner);
         let mut translator = CAV01Translator::init(&*inner);
-        println!("subs: {:?}", translator.sub_f);
-        translator.run();
+        // println!("subs: {:?}", translator.sub_f);
+        let res = translator.run();
+        return Some(res);
         // translator.print_automaton();
     }
+    return None;
 }

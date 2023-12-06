@@ -2,12 +2,13 @@ use crate::logics::*;
 use crate::petri::*;
 
 use petgraph::graph::*;
-use petgraph::dot::{Dot, Config};
+use petgraph::dot::{Dot};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io::prelude::*;
 
+pub mod checker;
 pub mod vwaa;
 pub mod gba;
 pub mod translator;

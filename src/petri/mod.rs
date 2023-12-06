@@ -5,25 +5,25 @@ use std::collections::HashMap;
 
 pub mod parser;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Arc {
     pub id: String,
     pub ty: ArcTy,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ArcTy {
     Plain(usize),
     Strct,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Marking {
     Plain(usize),
     Colored,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Place {
     pub name: String,
     pub page: String,
@@ -32,7 +32,7 @@ pub struct Place {
     pub consumers: Vec<(usize, usize)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Transition {
     pub name: String,
     pub page: String,
@@ -40,7 +40,7 @@ pub struct Transition {
     pub effects: Vec<(usize, usize)>,
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct PTNet {
     pub name: String,
     pub pages: Vec<String>,

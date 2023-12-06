@@ -48,13 +48,13 @@ pub fn validate_path(input: &str) -> bool {
     return true;
 }
 
-// #[derive(Default)]
+#[derive(Debug, Clone)]
 pub struct Automaton<S, A> {
     pub states: Vec<S>,
     pub init_states: Vec<S>,
     pub acc_states: Vec<S>,
     pub alphabet: Vec<A>,
-    pub transitions: HashMap<(S, A), Vec<S>>, // Vec of states as we may have non-deterministic usages
+    pub transitions: HashMap<S, Vec<(A, S)>>, // Vec of states as we may have non-deterministic usages
 }
 
 impl<S, A> Automaton<S, A> {
