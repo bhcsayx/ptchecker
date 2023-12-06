@@ -1147,4 +1147,32 @@
          </all-paths>
       </formula>
    </property>
+   <property>
+      <id>example-1</id>
+      <description>example-1</description>
+      <formula>
+         <all-paths>
+            <globally>
+               <negation>
+                  <is-fireable>
+                     <transition>t1</transition>
+                  </is-fireable>
+               </negation>
+            </globally>
+         </all-paths>
+      </formula>
+   </property>
+   <property>
+      <id>example-2</id>
+      <description>example-2</description>
+      <formula>
+         <all-paths>
+            <finally>
+               <is-fireable>
+                  <transition>t1</transition>
+               </is-fireable>
+            </finally>
+         </all-paths>
+      </formula>
+   </property>
 </property-set>

@@ -3,21 +3,21 @@ use crate::logics::{FormulaTy, PTAtom};
 use crate::logics::transys::{State, TranSys};
 
 
-pub fn visit_eu(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, FormulaTy), bool>, marks: & mut HashSet<State>) {
+pub fn visit_eu(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, String), bool>, marks: & mut HashSet<State>) {
     marks.insert(s);
     let fc = f.clone();
-    if info.contains_key(&(s, f.clone())) {
-        if let Some(true) = info.get(&(s, f.clone())) {
-            info.insert((s, f), true);
+    if info.contains_key(&(s, f.to_string())) {
+        if let Some(true) = info.get(&(s, f.to_string())) {
+            info.insert((s, f.to_string()), true);
         }
     } else if let FormulaTy::Until(f1, f2) = fc {
         check(T, s, *f2.clone(), info);
-        if let Some(true) = info.get(&(s, *f2.clone())) {
-            info.insert((s, f.clone()), true);
+        if let Some(true) = info.get(&(s, f2.to_string())) {
+            info.insert((s, f.to_string()), true);
         }
 
         check(T, s,*f1.clone(), info);
-        if let Some(false) = info.get(&(s, *f1.clone())) {
+        if let Some(false) = info.get(&(s, f1.to_string())) {
             return;
         }
 
@@ -31,31 +31,33 @@ pub fn visit_eu(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, 
     }
 }
 
-pub fn checkEU(T: &TranSys, sr: State, f: FormulaTy, info: &mut HashMap<(State, FormulaTy), bool>, marks: & mut HashSet<State>) {
+pub fn checkEU(T: &TranSys, sr: State, f: FormulaTy, info: &mut HashMap<(State, String), bool>, marks: & mut HashSet<State>) {
     visit_eu(T, sr, f, info, marks);
 }
 
-pub fn visit_au(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, FormulaTy), bool>, cp: &mut Vec<State>) {
+pub fn visit_au(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, String), bool>, cp: &mut Vec<State>) {
     let fc = f.clone();
-    if info.contains_key(&(s, f.clone())) {
-        if let Some(false) = info.get(&(s, f.clone())) {
+    if info.contains_key(&(s, f.to_string())) {
+        if let Some(false) = info.get(&(s, f.to_string())) {
             for s1 in cp.iter() {
-                info.insert((*s1, f.clone()), false);
+                info.insert((*s1, f.to_string()), false);
             }
         }
     } else if let FormulaTy::Forall(boxed_formula) = fc {
         if let FormulaTy::Until(f1, f2) = *boxed_formula {
             check(T, s,*f2.clone(), info);
-            if let Some(true) = info.get(&(s, *f2.clone())) {
-                info.insert((s, f.clone()), true);
+            if let Some(true) = info.get(&(s, f2.to_string())) {
+                info.insert((s, f.to_string()), true);
+                return;
             }
 
             check(T, s,*f1.clone(), info);
-            if let Some(false) = info.get(&(s,*f1.clone())) {
-                info.insert((s, f.clone()), false);
+            if let Some(false) = info.get(&(s,f1.to_string())) {
+                info.insert((s, f.to_string()), false);
                 for s1 in cp.iter() {
-                    info.insert((*s1, f.clone()), false);
+                    info.insert((*s1, f.to_string()), false);
                 }
+                return;
             }
 
             cp.push(s);
@@ -65,44 +67,65 @@ pub fn visit_au(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, 
                         visit_au(T, *s1, f.clone(), info, cp);
                     } else {
                         for s1 in cp.iter() {
-                            info.insert((*s1, f.clone()), false);
+                            info.insert((*s1, f.to_string()), false);
                         }
                     }
                 }
             }
-            info.insert((s, f), true);
+            info.insert((s, f.to_string()), true);
             cp.pop();
         }
     }
 }
 
 
-pub fn checkAU(T: &TranSys, sr: State, f: FormulaTy, info: &mut HashMap<(State, FormulaTy), bool>) {
+pub fn checkAU(T: &TranSys, sr: State, f: FormulaTy, info: &mut HashMap<(State, String), bool>) {
     let mut cp = Vec::new();
     visit_au(T, sr, f, info, &mut cp);
 }
 
 pub fn simplify(f: FormulaTy) -> FormulaTy {
     match f {
+        FormulaTy::Not(f) => {
+            return FormulaTy::Not(Box::new(simplify(*f)));
+        }
+        FormulaTy::Or(f1, f2) => {
+            return FormulaTy::Or(Box::new(simplify(*f1)), Box::new(simplify(*f2)));
+        }
+        FormulaTy::And(f1, f2) => {
+            return FormulaTy::And(Box::new(simplify(*f1)), Box::new(simplify(*f2)));
+        }
+        FormulaTy::Next(f) => {
+            return FormulaTy::Next(Box::new(simplify(*f)));
+        }
         FormulaTy::Global(f1) => {
             return FormulaTy::Until(Box::new(FormulaTy::False), f1);
         }
         FormulaTy::Finally(f1) => {
             return FormulaTy::Until(Box::new(FormulaTy::True), f1);
         }
+        FormulaTy::Until(f1, f2) => {
+            return FormulaTy::Until(Box::new(simplify(*f1)), Box::new(simplify(*f2)));
+        }
+        FormulaTy::Forall(f) => {
+            return FormulaTy::Forall(Box::new(simplify(*f)));
+        }
+        FormulaTy::Exists(f) => {
+            return FormulaTy::Exists(Box::new(simplify(*f)));
+        }
         _ => return f
     }
 }
 
-pub fn check(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, FormulaTy), bool>) {
+pub fn check(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, String), bool>) {
     let fc = f.clone();
-    if let None = info.get(&(s, f.clone())) {
+    if let None = info.get(&(s, f.to_string())) {
         match fc {
             FormulaTy:: True => {
-                info.insert((s, f.clone()), true);
+                info.insert((s, f.to_string()), true);
             }
             FormulaTy:: False => {
-                info.insert((s, f.clone()), false);
+                info.insert((s, f.to_string()), false);
             }
             FormulaTy::Prop(f1) => {
                 let name = match f1 {
@@ -110,40 +133,40 @@ pub fn check(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, For
                     _ => { panic!("Cardinality not supported") }
                 };
                 if let Some(&ref set) = T.label_of(&name) {
-                    info.insert((s, f),
+                    info.insert((s, f.to_string()),
                                 if set.contains(&s) { true } else { false }
                     );
                 }
             }
             FormulaTy::Not(f1) => {
                 check(T, s, *f1.clone(), info);
-                if let Some(&b) = info.get(&(s,*f1.clone())) {
-                    info.insert((s, f), b);
+                if let Some(&b) = info.get(&(s,f1.to_string())) {
+                    info.insert((s, f.to_string()), !b);
                 }
             }
             FormulaTy::Or(f1, f2) => {
                 check(T, s, *f1.clone(), info);
-                if let Some(&b) = info.get(&(s,*f1.clone())) {
+                if let Some(&b) = info.get(&(s,f1.to_string())) {
                     if b {
-                        info.insert((s, f), true);
+                        info.insert((s, f.to_string()), true);
                     } else {
                         check(T, s, *f2.clone(), info);
-                        if let Some(&b) = info.get(&(s, *f2)) {
-                            info.insert((s, f), b);
+                        if let Some(&b) = info.get(&(s, f2.to_string())) {
+                            info.insert((s, f.to_string()), b);
                         }
                     }
                 }
             }
             FormulaTy::And(f1, f2) => {
                 check(T, s, *f1.clone(), info);
-                if let Some(&b) = info.get(&(s,*f1.clone())) {
+                if let Some(&b) = info.get(&(s,f1.to_string())) {
                     if b {
                         check(T, s, *f2.clone(), info);
-                        if let Some(&b) = info.get(&(s, *f2)) {
-                            info.insert((s, f), b);
+                        if let Some(&b) = info.get(&(s, f2.to_string())) {
+                            info.insert((s, f.to_string()), b);
                         }
                     } else {
-                        info.insert((s, f), false);
+                        info.insert((s, f.to_string()), false);
                     }
                 }
             }
@@ -151,37 +174,31 @@ pub fn check(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, For
                 if let Some(&ref set) = T.states_from(&s) {
                     for s1 in set {
                         check(T, *s1, *f1.clone(), info);
-                        if let Some(&b) = info.get(&(*s1, *f1.clone())) {
-                            info.insert((s, f.clone()), true);
+                        if let Some(&b) = info.get(&(*s1, f1.to_string())) {
+                            info.insert((s, f.to_string()), true);
                             return;
                         }
                     }
                 }
-                info.insert((s, f), false);
+                info.insert((s, f.to_string()), false);
             }
-            // FormulaTy::Finally(f1) => {
-            //     check(T, s, simplify(f.clone()), info);
-            // }
-            // FormulaTy::Global(f1) => {
-            //     check(T, s, simplify(f.clone()), info);
-            // }
+
             FormulaTy::Forall(f1) => {
                 match *f1 {
                     FormulaTy::Next(f2) => {
                         if let Some(&ref set) = T.states_from(&s) {
                             for s1 in set {
                                 check(T, *s1,*f2.clone(), info);
-                                if let Some(false) = info.get(&(*s1, *f2.clone())) {
-                                    info.insert((s, f), false);
+                                if let Some(false) = info.get(&(*s1, f2.to_string())) {
+                                    info.insert((s, f.to_string()), false);
                                     return;
                                 }
                             }
-                            info.insert((s, f.clone()), true);
+                            info.insert((s, f.to_string()), true);
                         }
                     }
-                    FormulaTy::Global(_) | FormulaTy::Finally(_) => {
-                        let f2 = simplify(*f1.clone());
-                        checkAU(T, s, FormulaTy::Forall(Box::new(f2)), info);
+                    FormulaTy::Until(_, _) => {
+                        checkAU(T, s, f.clone(), info);
                     }
                     _ => {}
                 }
@@ -192,18 +209,17 @@ pub fn check(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, For
                         if let Some(&ref set) = T.states_from(&s) {
                             for s1 in set {
                                 check(T, *s1,*f2.clone(), info);
-                                if let Some(true) = info.get(&(*s1, *f2.clone())) {
-                                    info.insert((s, f), true);
+                                if let Some(true) = info.get(&(*s1, f2.to_string())) {
+                                    info.insert((s, f.to_string()), true);
                                     return;
                                 }
                             }
                         }
-                        info.insert((s, f), false);
+                        info.insert((s, f.to_string()), false);
                     }
-                    FormulaTy::Global(_) | FormulaTy::Finally(_) => {
-                        let f2 = simplify(*f1.clone());
+                    FormulaTy::Until(_, _) => {
                         let mut marks = HashSet::new();
-                        checkEU(T, s, FormulaTy::Exists(Box::new(f2)), info, &mut marks);
+                        checkEU(T, s, f.clone(), info, &mut marks);
                     }
                     _ => {}
                 }
@@ -216,13 +232,10 @@ pub fn check(T: &TranSys, s: State, f: FormulaTy, info: &mut HashMap<(State, For
 }
 
 pub fn almc(T: TranSys, s: State, f: FormulaTy) -> bool {
-    let mut info: HashMap<(State, FormulaTy), bool> = HashMap::new();
-    check(&T, s, f.clone(), &mut info);
-
-    let result = info.get(&(s, f));
-    if let Some(true) = result {
-        true
-    } else {
-        false
-    }
+    let mut info: HashMap<(State, String), bool> = HashMap::new();
+    let f_simpl = simplify(f);
+    println!("{}", f_simpl.to_string());
+    check(&T, s, f_simpl.clone(), &mut info);
+    let result = info.get(&(s, f_simpl.to_string()));
+    *result.unwrap()
 }

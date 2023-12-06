@@ -5,6 +5,7 @@ use ptchecker::petri::parser::*;
 use ptchecker::utils::*;
 
 use std::env;
+use std::fmt::{Debug, Display};
 use std::path::Path;
 use std::process::exit;
 use ptchecker::logics::ctl::almc;
@@ -25,7 +26,7 @@ fn main() {
         println!("Invalid input path\n");
         exit(1);
     }
-    let model_path = Path::new(args[1].as_str()).join("model.pnml");
+    let model_path = Path::new(args[1].as_str()).join("model1.pnml");
     let nets = parse_pnml(model_path.to_str().unwrap()).unwrap_or(Vec::new());
     if nets.len() == 0 {
         println!("No model found, exiting\n");
@@ -34,10 +35,10 @@ fn main() {
     println!("read nets: {:#?}", nets[0]);
     let input_path = Path::new(args[1].as_str()).join("CTLFireability.xml");
     if let Ok(formulas) = parse_formulas(input_path.to_str().unwrap()) {
-        for f in formulas {
-            println!("formula: {:?}\n", f);
-        }
-        // println!("{}", test(&nets[0], &formulas[15]))
+        // for f in formulas {
+        //     println!("formula: {}\n", f.ty);
+        // }
+        println!("{}", test(&nets[0], &formulas[16]))
     }
 }
 
