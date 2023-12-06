@@ -161,7 +161,7 @@ impl TranSys {
                         }
                     }
                     if let Some(index_older) = tran.duplicate_config(&new_config) {
-                        println!("{:?} linking to previous state: {:?}", index_old, index_older);
+                        // println!("{:?} linking to previous state: {:?}", index_old, index_older);
                         if index_old != index_older {
                             tran.insert_transition(index_old, index_older);
                             continue;
@@ -172,7 +172,7 @@ impl TranSys {
                     all.push((index_all, new_config.clone()));
                     tran.insert_mapping(index_all, new_config.clone());
                     tran.insert_transition(index_old, index_all);
-                    println!("{:?}", (index_old, index_all, new_config))
+                    // println!("{:?}", (index_old, index_all, new_config))
                 }
             }
             tran.insert_fireable(index_old, fireable);

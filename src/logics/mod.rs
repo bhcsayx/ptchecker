@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::hash_set::Iter;
+use std::fmt;
+use std::fmt::Formatter;
 use std::hash::{Hash, Hasher};
 
 pub mod parser;
@@ -39,6 +41,85 @@ pub enum FormulaTy {
 
 impl std::fmt::Debug for FormulaTy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FormulaTy::True => {
+                write!(f, "True");
+            },
+            FormulaTy::False => {
+                write!(f, "False");
+            },
+            FormulaTy::Prop(atom) => {
+                match atom {
+                    PTAtom::Cardinality(lhs, rhs) => {
+                        write!(f, "Card({} <= {})", lhs, rhs);
+                    },
+                    PTAtom::Fireability(inner) => {
+                        write!(f, "Fire({})", inner);
+                    },
+                }
+            },
+            FormulaTy::Neg(atom) => {
+                match atom {
+                    PTAtom::Cardinality(lhs, rhs) => {
+                        write!(f, "!Card({} <= {})", lhs, rhs);
+                    },
+                    PTAtom::Fireability(inner) => {
+                        write!(f, "!Fire({})", inner);
+                    },
+                }
+            },
+            FormulaTy::Not(inner) => {
+                write!(f, "!");
+                (*inner.clone()).fmt(f);
+            },
+            FormulaTy::Or(lhs, rhs) => {
+                write!(f, "(");
+                (*lhs.clone()).fmt(f);
+                write!(f, " | ");
+                (*rhs.clone()).fmt(f);
+                write!(f, ")");
+            },
+            FormulaTy::And(lhs, rhs) => {
+                write!(f, "(");
+                (*lhs.clone()).fmt(f);
+                write!(f, " & ");
+                (*rhs.clone()).fmt(f);
+                write!(f, ")");
+            },
+            FormulaTy::Finally(inner) => {
+                write!(f, "F ");
+                (*inner.clone()).fmt(f);
+            },
+            FormulaTy::Next(inner) => {
+                write!(f, "X ");
+                (*inner.clone()).fmt(f);
+            },
+            FormulaTy::Global(inner) => {
+                write!(f, "G ");
+                (*inner.clone()).fmt(f);
+            },
+            FormulaTy::Until(lhs, rhs) => {
+                (*lhs.clone()).fmt(f);
+                write!(f, " U ");
+                (*rhs.clone()).fmt(f);
+            },
+            FormulaTy::Release(lhs, rhs) => {
+                (*lhs.clone()).fmt(f);
+                write!(f, " R ");
+                (*rhs.clone()).fmt(f);
+            },
+            FormulaTy::Forall(inner) => {
+                write!(f, "A ");
+                (*inner.clone()).fmt(f);
+            },
+            _ => {},
+        }
+        return Ok(());
+    }
+}
+
+impl fmt::Display for FormulaTy {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             FormulaTy::True => {
                 write!(f, "True");
