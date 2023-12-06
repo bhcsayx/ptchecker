@@ -37,8 +37,8 @@ impl CAV01Translator {
             match sub {
                 FormulaTy::True => {},
                 FormulaTy::False => {},
-                FormulaTy::Prop(_) => {},
-                FormulaTy::Neg(_) => {},
+                // FormulaTy::Prop(_) => {},
+                // FormulaTy::Neg(_) => {},
                 FormulaTy::And(_, _) => {},
                 FormulaTy::Or(_, _) => {},
                 _ => {
@@ -82,6 +82,9 @@ impl CAV01Translator {
                 if action.len() > 1 {
                     action.remove(&FormulaTy::True);
                 }
+                if *dest == FormulaTy::True || *dest == FormulaTy::False {
+                    continue;
+                }
                 if self.atrans.contains_key(s) {
                     let trans_ref = self.atrans.get_mut(s).unwrap();
                     trans_ref.push((action.clone(), dest.clone()));
@@ -92,6 +95,12 @@ impl CAV01Translator {
             }
         }
         // println!("atrans: {:#?}", self.atrans);
+        for (k, v) in self.atrans.iter() {
+            for t in v.iter() {
+                println!("atran: {:?} -- {:?} -> {:?}", k, t.0, t.1);
+            }
+        }
+        println!("keys: {:?}", self.atrans.keys());
         (inits, finals)
     }
 
@@ -110,9 +119,10 @@ impl CAV01Translator {
             }
             else {
                 let in_flag = destination.contains(&f);
-                destination.remove(f);
+                // destination.remove(f);
                 for (a, d) in self.atrans[f].iter() {
-                    if a.set.is_subset(&action.set) && (destination.contains(d) || *d == FormulaTy::True) {
+                    let vwaa_d = break_conjs(d);
+                    if a.set.is_subset(&action.set) && (vwaa_d.set.is_subset(&destination.set) && !vwaa_d.contains(&f)) {
                         res.insert(f.clone());
                         break;
                     }
@@ -128,10 +138,11 @@ impl CAV01Translator {
     pub fn gba_build(&mut self, inits: &FormulaSet, finals: &FormulaSet) {
         let mut unprocessed = vec![];
         let mut processed = vec![];
-        for i in inits.set.iter() {
-            let init_set = break_conjs(i);
-            unprocessed.push(init_set.clone());
-        }
+        // for i in inits.set.iter() {
+        //     let init_set = break_conjs(i);
+        //     unprocessed.push(init_set.clone());
+        // }
+        unprocessed.push(inits.clone());
         
         while unprocessed.len() != 0 {
             let state = unprocessed.remove(0);
@@ -151,10 +162,11 @@ impl CAV01Translator {
 
             for (a, d) in trans.iter() {
                 let d_set = break_conjs(d);
+                // let d_set = FormulaSet::from_iter(vec![d.clone()]);
                 let mut a_set = a.clone();
-                if a_set.len() > 1 {
-                    a_set.remove(&FormulaTy::True);
-                }
+                // if a_set.len() > 1 {
+                //     a_set.remove(&FormulaTy::True);
+                // }
                 // println!("tran broken: {:?} -> {:?} on {:?}", state, d_set, a_set);
                 let f_set = self.gba_final(&state, &a_set, &d_set, finals);
                 // println!("tran with final: {:?} -> {:?} on {:?}, final: {:?}", state, d_set, a_set, f_set);
@@ -186,18 +198,25 @@ impl CAV01Translator {
             }
         }
         // println!("gtrans: {:#?}", self.gtrans);
-        // for (k, v) in self.gtrans.iter() {
-        //     for (a, d, f) in v.iter() {
-        //         println!("trans: {:?} -> {:?} under {:?}, final {:?}", k, d, a, f);
-        //     }
-        // }
+        for (k, v) in self.gtrans.iter() {
+            for (a, d, f) in v.iter() {
+                println!("gtrans: {:?} -> {:?} under {:?}, final {:?}", k, d, a, f);
+            }
+        }
     }
 
     pub fn ba_final(&self, finals: &Vec<FormulaTy>, tran: &(FormulaSet, FormulaSet, FormulaSet), prev: usize) -> usize {
-        if prev != finals.len() && tran.2.contains(&finals[prev.clone()]) {
-            return self.ba_final(finals, tran, prev + 1);
+        // if prev != finals.len() && tran.2.contains(&finals[prev.clone()]) {
+        //     return self.ba_final(finals, tran, prev + 1);
+        // }
+        // return prev;
+        let mut ret = if prev == finals.len() {0} else {prev};
+        for i in ret..finals.len() {
+            if !tran.2.contains(&finals[i.clone()]) {
+                return i;
+            }
         }
-        return prev;
+        return finals.len();
     }
 
     pub fn ba_build(&mut self, inits: &FormulaSet, finals: &FormulaSet) {
@@ -206,21 +225,33 @@ impl CAV01Translator {
         let mut tmp_trans = HashMap::new();
         let mut finals_vec: Vec<FormulaTy> = finals.set.iter().map(|f| f.clone()).collect();
         println!("finals vec: {:?}", finals_vec);
-        for i in inits.set.iter() {
-            let init_set = break_conjs(i);
-            println!("init set: {:?}", init_set);
-            for (k, v) in self.gtrans.iter() {
-                if *k == init_set {
-                    // println!("Key found: {:#?}", self.gtrans[k]);
-                    for tran in self.gtrans[k].iter() {
-                        let fin = self.ba_final(&finals_vec, tran, 0);
-                        // println!("tran: {:?} {:?} {:?}", tran.1, tran.2, fin);
-                        unprocessed.insert(0, (tran.1.clone(), fin.clone()));
-                    }
-                    break;
-                }
-            }
-        }
+        // for i in inits.set.iter() {
+        //     let init_set = break_conjs(i);
+        //     println!("init set: {:?}", init_set);
+        //     for (k, v) in self.gtrans.iter() {
+        //         if *k == init_set {
+        //             // println!("Key found: {:#?}", self.gtrans[k]);
+        //             for tran in self.gtrans[k].iter() {
+        //                 let fin = self.ba_final(&finals_vec, tran, 0);
+        //                 // println!("inserting tran: {:?} {:?} {:?}", tran.1, tran.2, fin);
+        //                 unprocessed.insert(0, (tran.1.clone(), fin.clone()));
+        //             }
+        //             break;
+        //         }
+        //     }
+        // }
+        // for (k, v) in self.gtrans.iter() {
+        //     if *k == inits {
+        //         // println!("Key found: {:#?}", self.gtrans[k]);
+        //         for tran in self.gtrans[k].iter() {
+        //             let fin = self.ba_final(&finals_vec, tran, 0);
+        //             // println!("inserting tran: {:?} {:?} {:?}", tran.1, tran.2, fin);
+        //             unprocessed.insert(0, (tran.1.clone(), fin.clone()));
+        //         }
+        //         break;
+        //     }            
+        // }
+        unprocessed.push((inits.clone(), 0));
 
         while unprocessed.len() != 0 {
             let (gstate, fin) = unprocessed.remove(0);
@@ -230,7 +261,7 @@ impl CAV01Translator {
                 if *k == gstate {
                     for (a_set, d_set, f_set) in self.gtrans[k].iter() {
                         let new_fin = self.ba_final(&finals_vec, &(a_set.clone(), d_set.clone(), f_set.clone()), 
-                            if fin == finals_vec.len() { 0 } else { fin.clone() });
+                            fin.clone());
                         let mut new_flag = true;
                         for (s, fin) in unprocessed.iter() {
                             if *s == d_set.clone() && *fin == new_fin {
@@ -243,7 +274,8 @@ impl CAV01Translator {
                             }
                         }
                         if new_flag {
-                            // println!("find new state: {:?}", (d.clone(), new_fin.clone()));
+                            // println!("find new state: {:?}", (d_set.clone(), new_fin.clone()));
+                            // println!("from transition: {:?} -- {:?} -> {:?}", gstate.clone(), f_set.clone(), d_set.clone());
                             unprocessed.insert(0, (d_set.clone(), new_fin.clone()));
                         }
                         // else {
@@ -306,10 +338,15 @@ impl CAV01Translator {
             }
         }
         for (k, v) in self.trans.iter() {
-            for (a, d, f) in v.iter() {
-                println!("trans: {:?} -> {:?} under {:?}", k, (d, f), a);
+            // for (a, d, f) in v.iter() {
+            //     println!("trans: {:?} -> {:?} under {:?}", k, (d, f), a);
+            // }
+            if k.0 == *inits && k.1 == 0 {
+                println!("buchi init state: {:?}", k);
             }
         }
+        // println!("init: {:?}", inits);
+        // println!("final: {:?}", finals);
     }
 
     pub fn run(&mut self) {

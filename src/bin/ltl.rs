@@ -36,8 +36,8 @@ fn ltl_check(model: &PTNet, input: &Formula) {
         )))
     };
     
-    // build_automaton_cav01(&test2)
-    let tran = TranSys::from_petri(&model);
+    build_automaton_cav01(input)
+    // let tran = TranSys::from_petri(&model);
     // build_automaton_pstv95(input);
 }
 
@@ -68,7 +68,7 @@ fn main() {
     if let Ok(formulas) = parse_formulas(input_path.to_str().unwrap()) {
         for f in formulas.iter() {
             // ltl_check(f);
+            ltl_check(&nets[0], f);
         }
-        ltl_check(&nets[0], &formulas[0]);
     }
 }
