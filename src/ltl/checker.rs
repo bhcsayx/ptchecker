@@ -129,6 +129,10 @@ impl LTLChecker {
         self.stack_1.push((spec.clone(), marking.clone()));
         let markings = self.fireable_set(marking.clone());
         // println!("markings: {:?}", markings);
+        if !self.auto.transitions.contains_key(spec) {
+            // println!("invalid key: {:?}", spec);
+            return false;
+        }
         for (a, d) in self.auto.transitions[spec].clone().iter() {
             // println!("tran: {:?} {:?}", a, d);
             let filtered = self.filter_marks(a, d, &markings);

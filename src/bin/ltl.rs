@@ -80,11 +80,11 @@ fn main() {
     // println!("read nets: {:#?}", nets[0]);
     let input_path = Path::new(args[1].as_str()).join("LTLFireability.xml");
     if let Ok(formulas) = parse_formulas(input_path.to_str().unwrap()) {
-        // for f in formulas.iter() {
-        //     // ltl_check(f);
-        //     ltl_check(&nets[0], f);
-        //     break;
-        // }
-        ltl_check(&nets[0], &formulas[10]);
+        for f in formulas.iter() {
+            // ltl_check(f);
+            ltl_check(&nets[0], f);
+            // break;
+        }
+        // ltl_check(&nets[0], &formulas[2]);
     }
 }
