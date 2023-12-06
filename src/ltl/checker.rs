@@ -129,16 +129,16 @@ impl LTLChecker {
         self.stack_1.push((spec.clone(), marking.clone()));
         let markings = self.fireable_set(marking.clone());
         // println!("markings: {:?}", markings);
-        if !self.auto.transitions.contains_key(spec) {
-            // println!("invalid key: {:?}", spec);
-            return false;
-        }
+        // if !self.auto.transitions.contains_key(spec) {
+        //     // println!("invalid key: {:?}", spec);
+        //     return false;
+        // }
         for (a, d) in self.auto.transitions[spec].clone().iter() {
             // println!("tran: {:?} {:?}", a, d);
             let filtered = self.filter_marks(a, d, &markings);
             // println!("filtered: {:?}", filtered);
             for m in filtered.iter() {
-                if !self.visited_1.contains(&(d.clone(), m.clone())) {
+                if !self.visited_1.contains(&(d.clone(), m.clone())) && self.auto.transitions.contains_key(d) {
                     let dest = d.clone();
                     if self.dfs1(&dest, m.clone()) {
                         return true;
@@ -165,7 +165,7 @@ impl LTLChecker {
                 if self.visited_1.contains(&(d.clone(), m.clone())) {
                     return true;
                 }
-                else if !self.visited_2.contains(&(d.clone(), m.clone())) {
+                else if !self.visited_2.contains(&(d.clone(), m.clone())) && self.auto.transitions.contains_key(d) {
                     let dest = d.clone();
                     if self.dfs2(&dest, m.clone(), spec_start, marking_start.clone()) {
                         return true;
