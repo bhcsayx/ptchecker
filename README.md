@@ -16,8 +16,11 @@ Here BINARY_NAME could be either ```standalone```(For CTL checking) or ```ltl```
 INPUT_DIR should be a directory including following files:
 
 model.pnml -- model file
+
 LTLFireability.xml
+
 CTLFireability.xml -- input formulas
+
 (We did not implement checking for cardinality properties due to time limit)
 
 There are two examples in data, and more could be found in following link:
