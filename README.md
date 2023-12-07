@@ -1,7 +1,7 @@
 # ptchecker
 Purdue CS560 course project, a model checker on petri net written in rust
 
-# Prerequisites
+## Prerequisites
 Recent stable rust build should be fine.
 
 ## Build & run
