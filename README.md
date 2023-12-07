@@ -1,20 +1,27 @@
 # ptchecker
-A Model Checker on Petri Net
+Purdue CS560 course project, a model checker on petri net written in rust
 
-## build & run
+# Prerequisites
+Recent stable rust build should be fine.
 
+## Build & run
+To build the tool, run:
 ```cargo build```
 
-```cargo run -- INPUT_DIR```
+To run:
+```cargo run --bin BINARY_NAME -- INPUT_DIR```
 
-Input directory should include following files:
+Here BINARY_NAME could be either ```standalone```(For CTL checking) or ```ltl```(For LTL checking)
+
+INPUT_DIR should be a directory including following files:
 
 model.pnml -- model file
 LTLFireability.xml
-LTLCardinality.xml
-CTLFireability.xml
-CTLCardinality.xml -- input formulas
+CTLFireability.xml -- input formulas
+(We did not implement checking for cardinality properties due to time limit)
 
-There is one example in data, and more could be found in following link:
+There are two examples in data, and more could be found in following link:
 
 https://mcc.lip6.fr/2023/archives/INPUTS-2023.tar.gz
+
+(To get results shown in presentation, please use "SatelliteMemory-PT-X00010Y0003" as INPUT_DIR)
